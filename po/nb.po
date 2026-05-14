@@ -1,14 +1,14 @@
 # Oversettelse av Agent Interaction til norsk bokmål.
-# Copyright (C) 2020-2024 John Erling Blad
+# Copyright (C) 2019-2024 John Erling Blad
 # This file is distributed under the same license as the Agent Interaction package.
-# John Erling Blad <jeblad@gmail.com>, 2020-2024.
+# John Erling Blad <jeblad@gmail.com>, 2019-2024.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Hera Access\n"
+"Project-Id-Version: Agent Interaction\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-14 20:49+0200\n"
-"PO-Revision-Date: 2024-05-14 20:01+0200\n"
+"POT-Creation-Date: 2024-05-14 20:49+0200\n"
+"PO-Revision-Date: 2024-05-14 20:49+0200\n"
 "Last-Translator: John Erling Blad <jeblad@gmail.com>\n"
 "Language-Team: Norwegian Bokmål\n"
 "Language: nb\n"
@@ -164,8 +164,8 @@ msgid "Information"
 msgstr "Informasjon"
 
 #: prefs.js:218
-msgid "About Hera Access"
-msgstr "Om agent-interaksjon"
+msgid "About Agent Interaction"
+msgstr "Om Agent-interaksjon"
 
 #: dialog.js:304
 msgid "Interrupt"

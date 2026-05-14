@@ -5,6 +5,6 @@
   "shell-version": [ "50" ],
   "settings-schema": "org.gnome.shell.extensions.Hera",
   "version": "0.1.0",
-  "url": "https://github.com/jeblad/hera",
+  "url": "https://github.com/jeblad/agent-interaction",
   "author": "John Erling Blad"
 }

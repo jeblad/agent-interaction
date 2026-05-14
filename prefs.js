@@ -1,3 +1,20 @@
+/*
+ * Agent Interaction - A GNOME extension for communicating with Hera agents.
+ * Copyright (C) 2019-2024 John Erling Blad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 import GObject from 'gi://GObject';
 import Adw from 'gi://Adw';
@@ -345,7 +362,7 @@ export default class HeraPreferences extends ExtensionPreferences {
                 translator_credits: 'John Erling Blad',
                 version: '1.0.0',
                 website: 'https://github.com/jeblad/hera',
-                copyright: '© 2020-2024 John Erling Blad',
+                copyright: '© 2019-2024 John Erling Blad',
                 license_type: Gtk.License.GPL_3_0,
             });
             aboutWindow.present();

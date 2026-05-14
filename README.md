@@ -23,7 +23,7 @@ Communication is handled via named pipes (`.in` and `.out`) and state is tracked
 
 ## Experimental Status & Development
 
-This is an **experimental project** with roots dating back to 2020 (*AgentInspector*). It is designed for developers exploring agentic workflows.
+This is an **experimental project** with roots dating back to late 2019 (*AgentInspector*). It is designed for developers exploring agentic workflows.
 
 If you do not have a full Hera backend running, you can use the built-in **Test Tools** in the Preferences window to:
 - Generate simulated agents ("Schrödinger").
@@ -50,9 +50,9 @@ make install
 
 ## License
 
-Licensed under the **GNU General Public License v3.0**.
+Licensed under the **GNU General Public License v3.0 only**.
 See the `LICENSE` file for the full text.
 
-Copyright © 2020-2024 John Erling Blad
+Copyright © 2019-2024 John Erling Blad
 
-*This extension is a continuation of work started in August 2024, inheriting concepts and code from earlier agent monitoring experiments.*
+*This extension is a continuation of work started in December 2019 (romjula), inheriting concepts and code from earlier agent monitoring experiments dating back to the summer of 2019.*

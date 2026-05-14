@@ -1,0 +1,24 @@
+old*/
+bak/
+node_modules/
+
+# Logs and temporary files
+*.log
+*.bak
+
+# GNOME Shell extension specific
+*.js.cache
+*.js.map
+*.gresource
+
+# Build artifacts
+build/
+dist/
+
+# Editor specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db

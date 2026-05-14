@@ -1,0 +1,250 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the Hera Quick Settings package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Hera Quick Settings\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-14 20:49+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: extension.js:92 extension.js:120 prefs.js:226
+msgid "Hera Access"
+msgstr ""
+
+#: extension.js:101
+msgid "Hera Service"
+msgstr ""
+
+#: extension.js:101
+msgid "Available agents"
+msgstr ""
+
+#: extension.js:174
+msgid "No agents found"
+msgstr ""
+
+#: extension.js:181
+msgid "Hera Settings..."
+msgstr ""
+
+#: prefs.js:44
+msgid "Test Tools (Schrödinger)"
+msgstr ""
+
+#: prefs.js:45
+msgid "Override status for debugging"
+msgstr ""
+
+#: prefs.js:50
+msgid "Enable override"
+msgstr ""
+
+#: prefs.js:51
+msgid "Ignore actual process status"
+msgstr ""
+
+#: prefs.js:58
+msgid "Agent status (Schrödinger)"
+msgstr ""
+
+#: prefs.js:59
+msgid "Determine if the agent should be perceived as alive or dead"
+msgstr ""
+
+#: prefs.js:66
+msgid "Generate Test Agent"
+msgstr ""
+
+#: prefs.js:67
+msgid "Create a fake .json file in /run/user/$UID/hera"
+msgstr ""
+
+#: prefs.js:88
+#, javascript-format
+msgid "Last updated: %s"
+msgstr ""
+
+#: prefs.js:102
+msgid "Active (Green)"
+msgstr ""
+
+#: prefs.js:109
+msgid "Inactive (Yellow)"
+msgstr ""
+
+#: prefs.js:121
+msgid "Generate Test Log"
+msgstr ""
+
+#: prefs.js:122
+msgid "Create a log file with 200 entries for hera-test-123"
+msgstr ""
+
+#: prefs.js:142
+#, javascript-format
+msgid ""
+"This is test message number %d. Checking if scrolling in GNOME 50 works "
+"correctly with many elements."
+msgstr ""
+
+#: prefs.js:157
+msgid "Generate 200 Lines"
+msgstr ""
+
+#: prefs.js:166
+msgid "Drop Window Layout"
+msgstr ""
+
+#: prefs.js:167
+msgid "Adjust the placement of the floating dialog window"
+msgstr ""
+
+#: prefs.js:186
+msgid "Placement"
+msgstr ""
+
+#: prefs.js:187
+msgid "Which side of the screen the window should attach to"
+msgstr ""
+
+#: prefs.js:189
+msgid "Left"
+msgstr ""
+
+#: prefs.js:189
+msgid "Right"
+msgstr ""
+
+#: prefs.js:195
+msgid "Top margin"
+msgstr ""
+
+#: prefs.js:195
+msgid "Pixels from top panel"
+msgstr ""
+
+#: prefs.js:196
+msgid "Bottom margin"
+msgstr ""
+
+#: prefs.js:196
+msgid "Pixels from bottom of screen"
+msgstr ""
+
+#: prefs.js:200
+msgid "Information"
+msgstr ""
+
+#: prefs.js:218
+msgid "About Hera Access"
+msgstr ""
+
+#: prefs.js:219
+#, javascript-format
+msgid "Hera Access Version %s"
+msgstr ""
+
+#: dialog.js:70
+#, javascript-format
+msgid "Session started. Communication: %s.in/out"
+msgstr ""
+
+#: dialog.js:171
+msgid "Send message to agent..."
+msgstr ""
+
+#: dialog.js:261
+msgid "Agent Info"
+msgstr ""
+
+#: dialog.js:266
+msgid "Yes"
+msgstr ""
+
+#: dialog.js:266
+msgid "No"
+msgstr ""
+
+#: dialog.js:268
+#, javascript-format
+msgid ""
+"Agent: %s\n"
+"UUID: %s\n"
+"PID: %s\n"
+"System: %s\n"
+"\n"
+"%s"
+msgstr ""
+
+#: dialog.js:269
+msgid "N/A"
+msgstr ""
+
+#: dialog.js:269
+msgid "No description available."
+msgstr ""
+
+#: dialog.js:286
+msgid "Agent settings dialog for status mapping is not yet implemented."
+msgstr ""
+
+#: dialog.js:304
+msgid "Select Context Files"
+msgstr ""
+
+#: dialog.js:315
+#, javascript-format
+msgid "File “%s” is not plain text and was ignored."
+msgstr ""
+
+#: dialog.js:323 utils.js:243
+msgid "File selection cancelled or failed."
+msgstr ""
+
+#: dialog.js:324
+#, javascript-format
+msgid "Hera: Portal error: %s"
+msgstr ""
+
+#: dialog.js:453
+msgid "You"
+msgstr ""
+
+#: dialog.js:455
+#, javascript-format
+msgid "%s • %s"
+msgstr ""
+
+#: dialog.js:557
+msgid "--- Session Restored ---"
+msgstr ""
+
+#: dialog.js:669 dialog.js:673 dialog.js:677
+#, javascript-format
+msgid "Signal %s handled"
+msgstr ""
+
+#: dialog.js:705
+#, javascript-format
+msgid "Cannot send signal %s because the PID is unavailable"
+msgstr ""
+
+#: dialog.js:712
+#, javascript-format
+msgid "Sent signal %s to process with PID %s"
+msgstr ""
+
+#: dialog.js:726
+#, javascript-format
+msgid "Error sending to agent: %s"
+msgstr ""

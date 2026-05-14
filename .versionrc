@@ -1,0 +1,12 @@
+{
+  "bumpFiles": [
+    {
+      "filename": "package.json",
+      "type": "json"
+    },
+    {
+      "filename": "metadata.json",
+      "type": "json"
+    }
+  ]
+}

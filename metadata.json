@@ -1,0 +1,10 @@
+{
+  "name": "Agent Interaction",
+  "description": "An advanced integration for Hera (Heuristic Reasoning Agent) in GNOME Quick Settings. Facilitates real-time monitoring and communication with active agents through a discreet drop window.",
+  "uuid": "agent-interaction@jeblad.github.com",
+  "shell-version": [ "50" ],
+  "settings-schema": "org.gnome.shell.extensions.Hera",
+  "version": "0.1.0",
+  "url": "https://github.com/jeblad/hera",
+  "author": "John Erling Blad"
+}

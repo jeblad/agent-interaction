@@ -1,0 +1,293 @@
+# Oversettelse av Agent Interaction til norsk bokmål.
+# Copyright (C) 2020-2024 John Erling Blad
+# This file is distributed under the same license as the Agent Interaction package.
+# John Erling Blad <jeblad@gmail.com>, 2020-2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Hera Access\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-14 20:49+0200\n"
+"PO-Revision-Date: 2024-05-14 20:01+0200\n"
+"Last-Translator: John Erling Blad <jeblad@gmail.com>\n"
+"Language-Team: Norwegian Bokmål\n"
+"Language: nb\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: extension.js:92 extension.js:120 prefs.js:226
+msgid "Agent Interaction"
+msgstr "Agent-interaksjon"
+
+#: dialog.js:113
+msgid "Unknown Agent"
+msgstr "Ukjent agent"
+
+#: extension.js:101
+msgid "Hera Service"
+msgstr "Hera-tjeneste"
+
+#: extension.js:101
+msgid "Available agents"
+msgstr "Tilgjengelige agenter"
+
+#: dialog.js:116
+#, javascript-format
+msgid "%s (%s)"
+msgstr "%s (%s)"
+
+#: extension.js:174
+msgid "No agents found"
+msgstr "Ingen agenter funnet"
+
+#: extension.js:181
+msgid "Hera Settings..."
+msgstr "Innstillinger for agent-interaksjon …"
+
+#: prefs.js:44
+msgid "Test Tools (Schrödinger)"
+msgstr "Testverktøy (Schrödinger)"
+
+#: prefs.js:45
+msgid "Override status for debugging"
+msgstr "Overstyr status for feilsøking"
+
+#: prefs.js:50
+msgid "Enable override"
+msgstr "Aktiver overstyring"
+
+#: prefs.js:51
+msgid "Ignore actual process status"
+msgstr "Ignorer faktisk prosess-status"
+
+#: prefs.js:58
+msgid "Agent status (Schrödinger)"
+msgstr "Agentstatus (Schrödinger)"
+
+#: prefs.js:59
+msgid "Determine if the agent should be perceived as alive or dead"
+msgstr "Bestem om agenten skal oppfattes som levende eller død"
+
+#: prefs.js:66
+msgid "Generate Test Agent"
+msgstr "Generer testagent"
+
+#: prefs.js:67
+msgid "Create a fake .json file in /run/user/$UID/hera"
+msgstr "Opprett en fiktiv .json-fil i /run/user/$UID/hera"
+
+#: prefs.js:88
+#, javascript-format
+msgid "Last updated: %s"
+msgstr "Sist oppdatert: %s"
+
+#: prefs.js:102
+msgid "Active (Green)"
+msgstr "Aktiv (Grønn)"
+
+#: prefs.js:109
+msgid "Inactive (Yellow)"
+msgstr "Inaktiv (Gul)"
+
+#: prefs.js:121
+msgid "Generate Test Log"
+msgstr "Generer testlogg"
+
+#: prefs.js:122
+msgid "Create a log file with 200 entries for hera-test-123"
+msgstr "Opprett en loggfil med 200 innslag for hera-test-123"
+
+#: prefs.js:142
+#, javascript-format
+msgid ""
+"This is test message number %d. Checking if scrolling in GNOME 50 works "
+"correctly with many elements."
+msgstr ""
+"Dette er testmelding nummer %d. Sjekker om rulling i GNOME 50 fungerer "
+"korrekt med mange elementer."
+
+#: prefs.js:157
+msgid "Generate 200 Lines"
+msgstr "Generer 200 linjer"
+
+#: prefs.js:163
+msgid "Reset Test Data"
+msgstr "Tilbakestill testdata"
+
+#: prefs.js:189
+msgid "Clear all generated test files"
+msgstr "Slett alle genererte testfiler"
+
+#: prefs.js:166
+msgid "Drop Window Layout"
+msgstr "Oppsett for Drop-vindu"
+
+#: prefs.js:167
+msgid "Adjust the placement of the floating dialog window"
+msgstr "Juster plasseringen av dialogvinduet"
+
+#: prefs.js:186
+msgid "Placement"
+msgstr "Plassering"
+
+#: prefs.js:187
+msgid "Which side of the screen the window should attach to"
+msgstr "Hvilken side av skjermen vinduet skal feste seg til"
+
+#: prefs.js:189
+msgid "Left"
+msgstr "Venstre"
+
+#: prefs.js:189
+msgid "Right"
+msgstr "Høyre"
+
+#: prefs.js:195
+msgid "Top margin"
+msgstr "Marg øverst"
+
+#: prefs.js:195
+msgid "Pixels from top panel"
+msgstr "Piksler fra toppanelet"
+
+#: prefs.js:196
+msgid "Bottom margin"
+msgstr "Bunnmarg"
+
+#: prefs.js:196
+msgid "Pixels from bottom of screen"
+msgstr "Piksler fra bunnen av skjermen"
+
+#: prefs.js:200
+msgid "Information"
+msgstr "Informasjon"
+
+#: prefs.js:218
+msgid "About Hera Access"
+msgstr "Om agent-interaksjon"
+
+#: dialog.js:304
+msgid "Interrupt"
+msgstr "Avbryt"
+
+#: dialog.js:341
+msgid "Interrupt (SIGINT)"
+msgstr "Avbryt (SIGINT)"
+
+#: dialog.js:342
+msgid "Terminate (SIGTERM)"
+msgstr "Terminer (SIGTERM)"
+
+#: dialog.js:343
+msgid "Kill (SIGKILL)"
+msgstr "Drep (SIGKILL)"
+
+#: prefs.js:219
+#, javascript-format
+msgid "Agent Interaction Version %s"
+msgstr "Agent-interaksjon versjon %s"
+
+#: dialog.js:70
+#, javascript-format
+msgid "Session started. Communication: %s.in/out"
+msgstr "Sesjon startet. Kommunikasjon: %s.in/out"
+
+#: dialog.js:171
+msgid "Send message to agent..."
+msgstr "Send melding til agent …"
+
+#: dialog.js:261
+msgid "Agent Info"
+msgstr "Agentinformasjon"
+
+#: dialog.js:266
+msgid "Yes"
+msgstr "Ja"
+
+#: dialog.js:266
+msgid "No"
+msgstr "Nei"
+
+msgid "Agent"
+msgstr "Agent"
+
+msgid "UUID"
+msgstr "UUID"
+
+msgid "PID"
+msgstr "PID"
+
+msgid "System"
+msgstr "System"
+
+msgid "Description"
+msgstr "Beskrivelse"
+
+#: dialog.js:269
+msgid "N/A"
+msgstr "I/T"
+
+#: dialog.js:269
+msgid "No description available."
+msgstr "Ingen beskrivelse tilgjengelig."
+
+#: dialog.js:286
+msgid "Agent settings dialog for status mapping is not yet implemented."
+msgstr ""
+"Dialog for agentinnstillinger og status-mapping er ikke implementert ennå."
+
+#: dialog.js:304
+msgid "Select Context Files"
+msgstr "Velg kontekstfiler"
+
+#: dialog.js:315
+msgid "File “%s” is not plain text and was ignored."
+msgstr "Filen «%s» er ikke ren tekst og ble ignorert."
+
+#: dialog.js:323 utils.js:243
+msgid "File selection cancelled or failed."
+msgstr "Filvalg avbrutt eller feilet."
+
+#: dialog.js:324
+#, javascript-format
+msgid "Hera: Portal error: %s"
+msgstr "Hera: Portal-feil: %s"
+
+#: dialog.js:453
+msgid "You"
+msgstr "Du"
+
+#: dialog.js:455
+#, javascript-format
+msgid "%s • %s"
+msgstr "%s • %s"
+
+#: dialog.js:557
+msgid "--- Session Restored ---"
+msgstr "--- Sesjon gjenopprettet ---"
+
+#: dialog.js:669 dialog.js:673 dialog.js:677
+msgid "Signal %s handled"
+msgstr "Signalet %s ble håndtert"
+
+#: dialog.js:705
+#, javascript-format
+msgid "Cannot send signal %s because the PID is unavailable"
+msgstr "Kan ikke sende signalet %s fordi prosess-ID (PID) mangler"
+
+#: dialog.js:712
+#, javascript-format
+msgid "Sent signal %s to process with PID %s"
+msgstr "Sendte signalet %s til prosess med PID %s"
+
+#: dialog.js:726
+#, javascript-format
+msgid "Error sending to agent: %s"
+msgstr "Feil ved sending til agent: %s"
+
+#~ msgid "Signal SIGSTOP handled"
+#~ msgstr "Signalet SIGSTOP ble håndtert"
+
+#~ msgid "Signal SIGCONT handled"
+#~ msgstr "Signalet SIGCONT ble håndtert"

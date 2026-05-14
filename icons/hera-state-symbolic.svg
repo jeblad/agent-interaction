@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <path
+     id="hera-ring"
+     class="accent"
+     fill="currentColor"
+     fill-rule="evenodd"
+     d="M 8,1 A 7,7 0 1 1 8,15 A 7,7 0 1 1 8,1 Z M 8,2 A 6,6 0 1 1 8,14 A 6,6 0 1 1 8,2 Z" />
+  <path
+     id="hera-blob"
+     fill="currentColor"
+     d="M 8,3 A 5,5 0 1 1 8,13 A 5,5 0 1 1 8,3 Z" />
+</svg>

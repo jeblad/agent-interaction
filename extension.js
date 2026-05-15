@@ -228,8 +228,7 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
             // Shell has cleaned up the focus stack before we open the prefs window.
             // This allows the window to "rise to the top" as expected.
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                // Wrap in Promise.resolve in case openPreferences returns undefined
-                Promise.resolve(this._indicator._extension.openPreferences()).catch(err => {
+                this._indicator._extension.openPreferences().catch(err => {
                     console.error(`Hera: Failed to open preferences: ${err}`);
                 });
                 return GLib.SOURCE_REMOVE;

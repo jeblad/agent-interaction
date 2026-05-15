@@ -720,8 +720,11 @@ class HeraAccessDialog extends St.BoxLayout {
     show() {
         if (!this.get_parent()) Main.layoutManager.addChrome(this);
 
-        // Move the window to the top of the stack (Z-order) in the chrome layer
-        this.get_parent().set_child_above_sibling(this, null);
+        const parent = this.get_parent();
+        if (parent) {
+            // Move the window to the top of the stack (Z-order) in the chrome layer.
+            this.raise_top();
+        }
 
         // If the window is hidden on the side, animate it forward.
         // Otherwise, just give focus to the text field.

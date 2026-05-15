@@ -24,7 +24,7 @@ price.  Our General Public Licenses are designed to make sure that you
 have the freedom to distribute copies of free software (and charge for
 them if you wish), that you receive source code or can get it if you
 want it, that you can change the software or use pieces of it in new
-free programs, and that you know you can do these things.
+programs, and that you know you can do these things.
 
   To protect your rights, we need to prevent others from denying you
 these rights or asking you to surrender the rights.  Therefore, you have
@@ -632,12 +632,11 @@ state the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
     Agent Interaction - A GNOME extension for communicating with Hera agents.
-    Copyright (C) 2020-2024  John Erling Blad
+    Copyright (C) 2019-2024  John Erling Blad
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 3 of the License.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -652,7 +651,7 @@ Also add information on how to contact you by electronic and paper mail.
   If the program does terminal interaction, make it output a short
 notice like this when it starts in an interactive mode:
 
-    Agent Interaction  Copyright (C) 2020-2024  John Erling Blad
+    Agent Interaction  Copyright (C) 2019-2024  John Erling Blad
     This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
     This is free software, and you are welcome to redistribute it
     under certain conditions; type `show c' for details.

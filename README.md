@@ -15,28 +15,31 @@ This project facilitates real-time monitoring and interaction with autonomous ag
 
 ## Architecture & Requirements
 
-Agent Interaction acts as a frontend for agents adhering to the Hera communication protocol. It expects agents to be present in:
+Agent Interaction acts as a frontend for agents adhering to the communication protocol used by hera, that is Heuristic Reasoning Agent. It expects agents to be present in:
+
 - `/run/hera/` (System-wide agents)
 - `/run/user/$UID/hera/` (User-specific agents)
 
-Communication is handled via named pipes (`.in` and `.out`) and state is tracked through `.json` metadata files.
+The protocol is fairly lightweight. Communication is handled via named pipes (`.in` and `.out`), control signals are used for urgent out-of-band actions, and the state of the agent is tracked through `.json` metadata files. Those files act as pid-files with additional data, in particular status (the state), identification, and pid code. Signals sent to the agents are assumed to trigger state changes that can be monitored in those files, but due to load issues there might be a delay before the change is visible, and thus we use tri-state buttons for control flows.
 
 ## Experimental Status & Development
 
 This is an **experimental project** with roots dating back to late 2019 (*AgentInspector*). It is designed for developers exploring agentic workflows.
 
 If you do not have a full Hera backend running, you can use the built-in **Test Tools** in the Preferences window to:
+
 - Generate simulated agents ("Schrödinger").
 - Toggle simulated liveness/death.
 - Generate massive test logs (200+ entries) to verify UI performance and scrolling.
 
 ## Testing
 
-Automated unit tests are available for the core logic and utility functions in `tests/unit_tests.js`. 
+Automated unit tests are available for the core logic and utility functions in `tests/unit_tests.js`.
 
 The testing strategy is intentionally lightweight to avoid heavy dependencies and complex mock environments for UI integration. We prioritize internal consistency and protocol adherence over heavy end-to-end UI testing frameworks.
 
 To run the tests:
+
 ```bash
 make test
 ```
@@ -46,6 +49,7 @@ make test
 ```bash
 make install
 ```
+
 *Note: Restart GNOME Shell (Log out/in on Wayland) after installation, then enable the extension via `gnome-extensions enable agent-interaction@jeblad.github.com`.*
 
 ## License

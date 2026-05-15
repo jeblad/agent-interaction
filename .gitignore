@@ -11,6 +11,11 @@ node_modules/
 *.js.map
 *.gresource
 
+# Gettext translations
+*.mo
+*.gmo
+locale/
+
 # Build artifacts
 build/
 dist/

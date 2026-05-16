@@ -199,12 +199,7 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
                     isConnected && isThisActive,
                     () => {
                         this._indicator.connectToAgent(agent.uuid);
-                        // By calling openAccessWindow explicitly here, we ensure that
-                        // the window "rises to the top" even if the agent was already active.
-                        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                            this._indicator.openAccessWindow(agent);
-                            return GLib.SOURCE_REMOVE;
-                        });
+                        this.menu.close();
                     },
                     this._settings,
                     this._stateGIcon
@@ -228,9 +223,11 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
             // Shell has cleaned up the focus stack before we open the prefs window.
             // This allows the window to "rise to the top" as expected.
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._indicator._extension.openPreferences().catch(err => {
+                try {
+                    this._indicator._extension.openPreferences();
+                } catch (err) {
                     console.error(`Hera: Failed to open preferences: ${err}`);
-                });
+                }
                 return GLib.SOURCE_REMOVE;
             });
         }, 'HeraSettingsItem'));
@@ -290,21 +287,29 @@ class HeraIndicator extends QuickSettings.SystemIndicator {
         }
     }
 
-    openAccessWindow(agentData) {
+    _prepareAccessWindow(agentData) {
         let win = this._accessWindows.get(agentData.uuid);
-        
         try {
             if (!win) {
                 win = new HeraAccessDialog(agentData, this._settings);
                 win.connect('destroy', HeraUtils.safeCallback(() => this._accessWindows.delete(agentData.uuid), 'HeraDialogDestroy'));
                 this._accessWindows.set(agentData.uuid, win);
+                // Legger vinduet til i chrome-laget umiddelbart, men siden det er
+                // sammenfoldet (collapsed) i konstruktøren, vises det kun som en 1px stripe.
+                Main.layoutManager.addChrome(win);
             }
-
             win.updateState(agentData);
-            win.show();
+            return win;
         } catch (e) {
-            console.error(`Hera: Error opening access dialog: ${e.message}`);
+            console.error(`Hera: Error preparing access dialog: ${e.message}`);
+            return null;
         }
+    }
+
+    openAccessWindow(agentData) {
+        let win = this._prepareAccessWindow(agentData);
+        if (win)
+            win.show();
     }
 
     _closeAllAccessWindows() {
@@ -407,16 +412,15 @@ class HeraIndicator extends QuickSettings.SystemIndicator {
         this._toggle.updateState(isConnected, activeAgent, agents);
 
         const currentUuid = activeAgent ? activeAgent.uuid : null;
-        const shouldShow = isConnected && activeAgent && (!this._wasConnected || currentUuid !== this._lastActiveUuid);
+        const isNewSession = isConnected && activeAgent && (!this._wasConnected || currentUuid !== this._lastActiveUuid);
 
         if (!isConnected) {
             this._closeAllAccessWindows();
-        } else if (shouldShow) {
-            // Use idle_add to prevent the window from "stealing" focus while navigating the menu
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, HeraUtils.safeCallback(() => {
-                this.openAccessWindow(activeAgent);
-                return GLib.SOURCE_REMOVE;
-            }, 'HeraAutoShow'));
+        } else if (isNewSession) {
+            // Gjenoppretter logikken for "tidligere valgt", men i stedet for å tvinge
+            // frem vinduet med .show(), sørger vi bare for at det er lastet og
+            // ligger klart (skjult) ved kanten.
+            this._prepareAccessWindow(activeAgent);
         }
 
         this._wasConnected = isConnected;

@@ -1,0 +1,30 @@
+old*/
+bak/
+node_modules/
+safe/
+
+# Logs and temporary files
+*.log
+*.bak
+
+# GNOME Shell extension specific
+*.js.cache
+*.js.map
+*.gresource
+
+# Gettext translations
+*.mo
+*.gmo
+locale/
+
+# Build artifacts
+build/
+dist/
+
+# Editor specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db

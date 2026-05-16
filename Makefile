@@ -51,6 +51,7 @@ install: build
 	@cp dialog.js $(INSTALL_PATH)/
 	@cp utils.js $(INSTALL_PATH)/
 	@cp prefs.js $(INSTALL_PATH)/
+	@cp stylesheet.css $(INSTALL_PATH)/
 	@cp LICENSE $(INSTALL_PATH)/ 2>/dev/null || true
 	@cp icons/*.svg $(INSTALL_PATH)/icons/ 2>/dev/null || true
 	@cp schemas/*.xml $(INSTALL_PATH)/schemas/
@@ -77,7 +78,7 @@ zip: build
 	@echo "Lager pakke for distribusjon..."
 	@rm -f $(UUID).shell-extension.zip
 	@mkdir -p _dist
-	@cp metadata.json extension.js dialog.js utils.js prefs.js LICENSE _dist/
+	@cp metadata.json extension.js dialog.js utils.js prefs.js stylesheet.css LICENSE _dist/ 2>/dev/null || true
 	@cp -r icons schemas locale _dist/ 2>/dev/null || true
 	@cd _dist && zip -qr ../$(UUID).shell-extension.zip .
 	@rm -rf _dist

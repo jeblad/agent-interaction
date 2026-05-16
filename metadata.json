@@ -4,6 +4,7 @@
   "uuid": "agent-interaction@jeblad.github.com",
   "shell-version": [ "50" ],
   "settings-schema": "org.gnome.shell.extensions.Hera",
+  "stylesheet": "stylesheet.css",
   "version": "0.1.0",
   "url": "https://github.com/jeblad/agent-interaction",
   "author": "John Erling Blad"

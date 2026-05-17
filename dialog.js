@@ -554,8 +554,14 @@ class HeraAccessDialog extends St.BoxLayout {
         } else if (text && text.length > 0) {
             // Escape agent output to prevent Pango markup injection
             const displayedText = (sender === 'agent' || sender === 'system') ? HeraUtils.escapePango(text) : text;
-            const content = new St.Label({ text: displayedText, style: 'font-size: 0.95em;' });
+            const content = new St.Label({
+                text: displayedText,
+                style_class: 'hera-message-content',
+                x_expand: true,
+            });
             content.clutter_text.line_wrap = true;
+            content.clutter_text.line_wrap_mode = Pango.WrapMode.WORD;
+            content.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
             msgBox.add_child(content);
         }
 

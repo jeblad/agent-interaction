@@ -160,13 +160,23 @@ export default class HeraPreferences extends ExtensionPreferences {
                 const filePath = GLib.build_filenamev([logDir, 'hera-test-123.log']);
                 const file = Gio.File.new_for_path(filePath);
 
+                const loremIpsumText = _("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n\n" +
+                                         "Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis et commodo pharetra, est eros bibendum elit, nec luctus magna felis sollicitudin mauris. Integer in mauris eu nibh euismod gravida. Duis ac tellus et risus vulputate vehicula. Donec lobortis risus a elit. Etiam tempor. Ut ullamcorper massa eu ligula. Cras porttitor ornare massa.\n\n" +
+                                         "Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augu, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui ligula, fringilla a, euismod sodales, sollicitudin vel, wisi. Morbi auctor lorem non justo. Nam lacus libero, dignissim sit amet, adipiscing nec, dolor.");
+                const paragraphs = loremIpsumText.split('\n\n');
+
                 let logData = '';
                 const now = Date.now();
                 // Generate 200 messages with 10-second intervals
                 for (let i = 1; i <= 200; i++) {
+                    const sender = i % 2 === 0 ? 'agent' : 'user';
+                    const text = paragraphs[(i - 1) % paragraphs.length];
+                    // Agenten sender to paragrafer for å teste multiline-effekt, mens brukeren sender én for å se vanlig wrap
+                    const formattedText = sender === 'agent' ? (text + '\n\n' + paragraphs[i % paragraphs.length]) : text;
+
                     const entry = {
-                        sender: i % 2 === 0 ? 'agent' : 'user',
-                        text: _('This is test message number %d. Checking if scrolling in GNOME 50 works correctly with many elements.').format(i),
+                        sender: sender,
+                        text: formattedText,
                         timestamp: new Date(now - (201 - i) * 10000).toISOString()
                     };
                     logData += JSON.stringify(entry) + '\n';

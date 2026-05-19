@@ -27,7 +27,7 @@ export default class AgentPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
 
-        // Gjenopprett vindusstørrelse fra innstillinger
+        // Restore window size from settings
         let width = settings.get_int('prefs-window-width');
         let height = settings.get_int('prefs-window-height');
         if (width < 400) width = 800;
@@ -53,7 +53,7 @@ export default class AgentPreferences extends ExtensionPreferences {
             title: _('Test Tools (Schrödinger)')
         });
 
-        // Bryter for å aktivere test-modus
+        // Switch to enable test mode
         const testModeRow = new Adw.SwitchRow({
             title: _('Enable override'),
             subtitle: _('Ignore actual process status'),
@@ -70,7 +70,7 @@ export default class AgentPreferences extends ExtensionPreferences {
         testModeRow.connect('notify::active', updateDescription);
         updateDescription(); // Set initial state
 
-        // Bryter for Dead/Alive
+        // Switch for Dead/Alive
         const forceAliveRow = new Adw.SwitchRow({
             title: _('Agent status (Schrödinger)'),
             subtitle: _('Determine if the agent should be perceived as alive or dead'),
@@ -135,7 +135,7 @@ export default class AgentPreferences extends ExtensionPreferences {
         testModeRow.bind_property('active', jsonActionRow, 'visible', GObject.BindingFlags.SYNC_CREATE);
         testGroup.add(jsonActionRow);
 
-        // Verktøy for å generere en lang test-logg
+        // Tool for generating a long test log
         const logActionRow = new Adw.ActionRow({
             title: _('Generate Test Log'),
             subtitle: _('Create a log file with 200 entries for hera-test-123'),
@@ -191,7 +191,7 @@ export default class AgentPreferences extends ExtensionPreferences {
         testModeRow.bind_property('active', logActionRow, 'visible', GObject.BindingFlags.SYNC_CREATE);
         testGroup.add(logActionRow);
 
-        // Knapp for å slette testdata
+        // Button to delete test data
         const resetTestBtn = new Gtk.Button({
             label: _('Reset Test Data'),
             valign: Gtk.Align.CENTER,
@@ -220,7 +220,7 @@ export default class AgentPreferences extends ExtensionPreferences {
         testModeRow.bind_property('active', resetActionRow, 'visible', GObject.BindingFlags.SYNC_CREATE);
         testGroup.add(resetActionRow);
 
-        // Status Mapping Seksjon
+        // Status Mapping Section
         const mappingGroup = new Adw.PreferencesGroup({
             title: _('Status Mapping'),
             description: _('Map agent status strings to signal colors'),
@@ -295,7 +295,7 @@ export default class AgentPreferences extends ExtensionPreferences {
         });
         mappingGroup.add(newEntryRow);
 
-        // Agent Layout seksjon
+        // Agent Window Layout section
         const layoutGroup = new Adw.PreferencesGroup({
             title: _('Agent Window Layout'),
             description: _('Manage the layout and size of the floating dialog window'),
@@ -328,7 +328,7 @@ export default class AgentPreferences extends ExtensionPreferences {
         resetLayoutRow.add_suffix(resetBtn);
         layoutGroup.add(resetLayoutRow);
 
-        // Informasjonsgruppe (About)
+        // Information group (About)
         const infoGroup = new Adw.PreferencesGroup({
             title: _('Information'),
         });

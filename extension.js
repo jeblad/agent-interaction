@@ -288,8 +288,8 @@ class AgentIndicator extends QuickSettings.SystemIndicator {
                 win = new AgentAccessDialog(agentData, this._settings);
                 win.connect('destroy', AgentUtils.safeCallback(() => this._accessWindows.delete(agentData.uuid), 'AgentDialogDestroy'));
                 this._accessWindows.set(agentData.uuid, win);
-                // Legger vinduet til i chrome-laget umiddelbart, men siden det er
-                // sammenfoldet (collapsed) i konstruktøren, vises det kun som en 1px stripe.
+                // Adds the window to the chrome layer immediately, but since it is
+                // collapsed in the constructor, it only appears as a 1px strip.
                 Main.layoutManager.addChrome(win);
             }
             win.updateState(agentData);
@@ -411,9 +411,9 @@ class AgentIndicator extends QuickSettings.SystemIndicator {
         if (!isConnected) {
             this._closeAllAccessWindows();
         } else if (isNewSession) {
-            // Gjenoppretter logikken for "tidligere valgt", men i stedet for å tvinge
-            // frem vinduet med .show(), sørger vi bare for at det er lastet og
-            // ligger klart (skjult) ved kanten.
+            // Restores the logic for "previously selected", but instead of forcing
+            // the window with .show(), we just ensure it is loaded and
+            // ready (hidden) at the edge.
             this._prepareAccessWindow(activeAgent);
         }
 

@@ -52,7 +52,7 @@ class AgentAccessDialog extends St.Widget {
                     this._settings.set_boolean('agent-force-reset', false); // Reset the trigger
                 }
             } else if (key.startsWith('agent-')) {
-                // Samle opp flere endringer (som ved reset) og kjør refresh én gang
+                // Collect multiple changes (as during reset) and run refresh once
                 if (this._refreshId) GLib.source_remove(this._refreshId);
                 this._refreshId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
                     this._refreshLayoutFromSettings();
@@ -80,7 +80,7 @@ class AgentAccessDialog extends St.Widget {
             height: geo.height,
         });
 
-        // Utled side for initial tilstand (0=venstre, 1=høyre)
+        // Determine side for initial state (0=left, 1=right)
         const monitor = Main.layoutManager.primaryMonitor;
         this._side = (geo.x + geo.width / 2 > monitor.x + monitor.width / 2) ? 1 : 0;
         this._expandedX = geo.x;
@@ -173,9 +173,9 @@ class AgentAccessDialog extends St.Widget {
     }
 
     /**
-     * Beregner ideell geometri for vinduet basert på gjeldende eller standard innstillinger.
-     * Dette sikrer en konsistent "clean slate" både ved oppstart og reset.
-     * @param {boolean} useDefaults - Om standardverdier fra schema skal brukes.
+     * Calculates ideal geometry for the window based on current or default settings.
+     * This ensures a consistent "clean slate" both at startup and reset.
+     * @param {boolean} useDefaults - Whether default values from the schema should be used.
      */
     _calculateGeometry(useDefaults = false) {
         if (!useDefaults) {
@@ -218,16 +218,16 @@ class AgentAccessDialog extends St.Widget {
     }
 
     /**
-     * Sjekker om Drop-vinduet overlapper med andre applikasjonsvinduer
-     * på nåværende monitor og workspace.
-     * @returns {boolean} true hvis vinduet er okludert eller okluderer andre.
+     * Checks if the Drop window overlaps with other application windows
+     * on the current monitor and workspace.
+     * @returns {boolean} true if the window is occluded or occludes others.
      */
     _checkOcclusion() {
         const monitor = Main.layoutManager.primaryMonitor;
         const workspace = global.workspace_manager.get_active_workspace();
 
-        // Sjekk mot arealet der vinduet faktisk vises (ekspandert tilstand)
-        // Vi legger til en liten margin (2px) for å unngå "kant-i-kant" problemer
+        // Check against the area where the window is actually shown (expanded state)
+        // We add a small margin (2px) to avoid "edge-to-edge" issues
         const myRect = {
             x1: this._expandedX + this._edgeOffset + 2,
             y1: this.y + this._edgeOffset + 2,
@@ -248,7 +248,7 @@ class AgentAccessDialog extends St.Widget {
 
         return windowActors.some(actor => {
             const rect = actor.get_meta_window().get_frame_rect();
-            // AABB kollisjonsdeteksjon mellom Meta.Rectangle og vårt målområde
+            // AABB collision detection between Meta.Rectangle and our target area
             return !(rect.x >= myRect.x2 ||
                      (rect.x + rect.width) <= myRect.x1 ||
                      rect.y >= myRect.y2 ||
@@ -269,7 +269,7 @@ class AgentAccessDialog extends St.Widget {
             global.window_manager.connect('switch-workspace', () => this._syncHoverState()),
         ];
 
-        // Start sporing av eksisterende vinduer
+        // Start tracking existing windows
         global.get_window_actors().forEach(actor => trackWindow(actor.get_meta_window()));
     }
 
@@ -287,7 +287,7 @@ class AgentAccessDialog extends St.Widget {
         this._side = (geo.x + geo.width / 2 > monitor.x + monitor.width / 2) ? 1 : 0;
         this._expandedX = geo.x;
 
-        // Beregn translation som flytter vinduet helt ut av skjermen fra der det står
+        // Calculate translation that moves the window completely off-screen from where it stands
         let targetTranslation = 0;
         if (this._isCollapsed) {
             targetTranslation = (this._side === 1)
@@ -689,9 +689,9 @@ class AgentAccessDialog extends St.Widget {
 
             const monitor = Main.layoutManager.primaryMonitor; // eslint-disable-line no-unused-vars
             if (!this._isCollapsed) this._expandedX = this.x;
-            this._animating = true; // Sett flagget FØR GSettings for å blokkere "changed"-loop
+            this._animating = true; // Set the flag BEFORE GSettings to block the "changed" loop
 
-            // Utled skjul-retning fra nåværende posisjon
+            // Derive hide direction from current position
             const isRight = (this.x + this.width / 2 > monitor.x + monitor.width / 2);
             const targetTranslation = isRight 
                 ? (monitor.x + monitor.width - this.x - this._edgeOffset) 

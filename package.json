@@ -1,6 +1,6 @@
 {
   "name": "agent-interaction",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An advanced integration for Hera (Heuristic Reasoning Agent) in GNOME Quick Settings. Facilitates real-time monitoring and communication with active agents through a discreet drop window.",
   "scripts": {
     "release": "commit-and-tag-version",

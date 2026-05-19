@@ -1,0 +1,215 @@
+/* Drop Window Styles */
+
+.drop-outer-container {
+    background-color: transparent;
+}
+
+.drop-window {
+    background-color: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 16px;
+}
+
+.drop-header {
+    margin-bottom: 8px;
+}
+
+.drop-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #3584e4;
+}
+
+.drop-file-bin {
+    margin-top: 8px;
+    padding: 4px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    spacing: 6px;
+}
+
+.drop-file-chips-box {
+    spacing: 6px;
+}
+
+.drop-file-chip {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 6px 10px;
+    spacing: 6px;
+}
+
+.drop-file-chip-icon-selected {
+    color: #7cfc00;
+}
+
+.drop-file-chip-icon-deselected {
+    color: #ff8c00;
+}
+
+.drop-input-entry {
+    margin-top: 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 8px 15px;
+}
+
+.drop-action-row {
+    margin-top: 10px;
+    spacing: 8px;
+}
+
+/* Signal Buttons */
+.drop-signal-group {
+    spacing: 0;
+}
+
+.drop-signal-content {
+    spacing: 0;
+}
+
+.drop-signal-button {
+    border-radius: 16px;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+}
+
+.drop-signal-button-left {
+    border-radius: 16px 0 0 16px;
+    margin-right: 0;
+}
+
+.drop-signal-button StIcon {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.drop-signal-dropdown-button {
+    border-radius: 0 16px 16px 0;
+    padding: 8px 6px;
+    margin-left: -1px;
+}
+
+.drop-signal-label {
+    font-weight: bold;
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.drop-signal-button.button-pending {
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.drop-signal-button.button-active {
+    background-color: #3584e4;
+    border: 1px solid #3584e4;
+    color: white;
+}
+
+.drop-signal-button.button-active .drop-signal-label {
+    color: white;
+}
+
+.drop-about-button {
+    color: #3584e4;
+    text-decoration: underline;
+    font-size: 0.85em;
+}
+
+.drop-chat-scroll {
+    /* Gjenbruk eksisterende scroll-styling hvis nødvendig */
+}
+
+/* Resize Handles */
+.drop-resize-handle {
+    background-color: transparent;
+    border: 1px solid transparent;
+}
+
+.drop-resize-handle-hover {
+    background-color: rgba(128, 128, 128, 0.1);
+    border: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+.drop-resize-handle-active {
+    background-color: rgba(128, 128, 128, 0.15);
+    border: 1px solid rgba(128, 128, 128, 0.6);
+}
+
+/* Chat Messages */
+.drop-message-bubble {
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 12px;
+}
+
+.drop-message-user {
+    margin-left: 60px;
+    background-color: rgba(53, 132, 228, 0.2);
+}
+
+.drop-message-agent {
+    margin-right: 60px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.drop-message-system {
+    background-color: rgba(128, 128, 128, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.drop-message-meta {
+    opacity: 0.8;
+}
+
+.drop-message-user.drop-message-meta { margin-right: 40px; }
+.drop-message-agent.drop-message-meta { margin-left: 40px; }
+
+.drop-message-indented.drop-message-user { margin-left: 100px; }
+.drop-message-indented.drop-message-agent { margin-right: 100px; }
+
+.drop-message-meta-label {
+    font-size: 0.75em;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.drop-message-meta-label {
+    font-size: 0.75em;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.drop-message-attachments {
+    margin-top: 6px;
+    spacing: 6px;
+}
+
+.drop-message-attachment-chip {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 4px 10px;
+}
+
+.drop-report-grid {
+    margin-top: 4px;
+    spacing: 2px;
+}
+
+.drop-report-row {
+    spacing: 10px;
+}
+
+.drop-report-key {
+    font-weight: bold;
+    font-size: 0.85em;
+    color: #888;
+    width: 85px;
+}
+
+.drop-report-val {
+    font-size: 0.85em;
+    color: #eee;
+}

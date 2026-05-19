@@ -16,7 +16,7 @@ pot:
 	@xgettext --from-code=UTF-8 --language=JavaScript --keyword=_ \
 		--package-name="Agent Interaction" \
 		--output=po/$(UUID).pot \
-		extension.js prefs.js dialog.js utils.js
+		extension.js prefs.js dialog.js utils.js resize.js
 
 update-po: pot
 	@for po in po/*.po; do \
@@ -50,6 +50,7 @@ install: build
 	@cp extension.js $(INSTALL_PATH)/
 	@cp dialog.js $(INSTALL_PATH)/
 	@cp utils.js $(INSTALL_PATH)/
+	@cp resize.js $(INSTALL_PATH)/
 	@cp prefs.js $(INSTALL_PATH)/
 	@cp stylesheet.css $(INSTALL_PATH)/
 	@cp LICENSE $(INSTALL_PATH)/ 2>/dev/null || true
@@ -78,7 +79,7 @@ zip: build
 	@echo "Lager pakke for distribusjon..."
 	@rm -f $(UUID).shell-extension.zip
 	@mkdir -p _dist
-	@cp metadata.json extension.js dialog.js utils.js prefs.js stylesheet.css LICENSE _dist/ 2>/dev/null || true
+	@cp metadata.json extension.js dialog.js utils.js resize.js prefs.js stylesheet.css LICENSE _dist/ 2>/dev/null || true
 	@cp -r icons schemas locale _dist/ 2>/dev/null || true
 	@cd _dist && zip -qr ../$(UUID).shell-extension.zip .
 	@rm -rf _dist

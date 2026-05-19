@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.Hera" path="/org/gnome/shell/extensions/hera/">
+    <key name="prefs-window-width" type="i">
+      <default>600</default>
+      <summary>Preferences window width</summary>
+    </key>
+    <key name="prefs-window-height" type="i">
+      <default>400</default>
+      <summary>Preferences window height</summary>
+    </key>
+    <key name="test-mode-enabled" type="b">
+      <default>false</default>
+      <summary>Test mode</summary>
+      <description>Enables simulated data for debugging the user interface.</description>
+    </key>
+    <key name="test-force-alive" type="b">
+      <default>false</default>
+      <summary>Simulate active agent</summary>
+      <description>When test mode is on, this determines if the agent should be reported as active.</description>
+    </key>
+    <key name="status-active" type="s">
+      <default>'active'</default>
+      <summary>Active status string</summary>
+      <description>Comma-separated list of values that should give a green light (e.g., 'active,running').</description>
+    </key>
+    <key name="status-inactive" type="s">
+      <default>'inactive'</default>
+      <summary>Inactive status string</summary>
+      <description>Comma-separated list of values that should give a yellow light.</description>
+    </key>
+    <key name="status-failed" type="s">
+      <default>'failed'</default>
+      <summary>Failed status string</summary>
+      <description>Comma-separated list of values that should give a red light.</description>
+    </key>
+    <key name="drop-window-x" type="i">
+      <default>-1</default>
+      <summary>X position of the Drop window</summary>
+    </key>
+    <key name="drop-window-y" type="i">
+      <default>-1</default>
+      <summary>Y position of the Drop window</summary>
+    </key>
+    <key name="drop-window-width" type="i">
+      <default>-1</default>
+      <summary>Width of the Drop window</summary>
+    </key>
+    <key name="drop-window-height" type="i">
+      <default>-1</default>
+      <summary>Height of the Drop window</summary>
+    </key>
+    <key name="drop-force-reset" type="b">
+      <default>false</default>
+      <summary>Force reset of Drop window layout</summary>
+      <description>Trigger a full reset of the Drop window's position, size, and side to default values.</description>
+    </key>
+    <key name="drop-window-top-margin" type="i">
+      <default>48</default>
+      <summary>Top margin for Drop window</summary>
+      <description>Minimum distance from the top of the monitor to avoid overlapping the top bar.</description>
+    </key>
+    <key name="drop-window-bottom-margin" type="i">
+      <default>96</default>
+      <summary>Bottom margin for Drop window</summary>
+      <description>Margin at the bottom of the monitor to avoid overlapping the dash/dock.</description>
+    </key>
+    <key name="drop-window-edge-offset" type="i">
+      <default>32</default>
+      <summary>Edge offset for Drop window</summary>
+      <description>The number of pixels the Drop window remains visible from the screen edge when collapsed, and defines the interactive width of the resize handle.</description>
+    </key>
+    <key name="drop-window-min-width" type="i">
+      <default>400</default>
+      <summary>Minimum width for Drop window</summary>
+      <description>The minimum allowed width for the Drop window when resized by the user.</description>
+    </key>
+    <key name="drop-window-min-height" type="i">
+      <default>400</default>
+      <summary>Minimum height for Drop window</summary>
+      <description>The minimum allowed height for the Drop window when resized by the user.</description>
+    </key>
+    <key name="drop-window-max-display-messages" type="i">
+      <default>50</default>
+      <summary>Maximum messages to display in chat history</summary>
+      <description>The maximum number of messages to keep in the visible chat history before old messages are removed.</description>
+    </key>
+    <key name="drop-window-default-scale-width" type="d">
+      <default>0.4</default>
+      <summary>Default width scale for Drop window</summary>
+      <description>The scaling factor (e.g., 0.4 for 40%) of the monitor's width used to calculate the default Drop window width.</description>
+    </key>
+    <key name="drop-window-default-max-width" type="i">
+      <default>900</default>
+      <summary>Maximum default width for Drop window</summary>
+      <description>The maximum pixel width for the Drop window when its default size is calculated.</description>
+    </key>
+  </schema>
+</schemalist>

@@ -23,35 +23,27 @@ import Gtk from 'gi://Gtk';
 import system from 'system'; // Import system for process ID
 import GLib from 'gi://GLib';
 
-export default class HeraPreferences extends ExtensionPreferences {
+export default class DropPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
 
-        // Restore window size from settings, but use safe defaults
-        let width = settings.get_int('window-width');
-        let height = settings.get_int('window-height');
+        // Gjenopprett vindusstørrelse fra innstillinger
+        let width = settings.get_int('prefs-window-width');
+        let height = settings.get_int('prefs-window-height');
         if (width < 400) width = 800;
-        if (height < 300) height = 600;
+        if (height < 400) height = 600;
         window.set_default_size(width, height);
 
-        // Ensure saved size is applied after the window is realized
-        window.connect('realize', () => {
-            window.set_default_size(width, height);
-        });
-
         const saveWindowSize = () => {
-            let savedWidth = window.get_allocated_width();
-            let savedHeight = window.get_allocated_height();
-            if (savedWidth < 400) savedWidth = 800;
-            if (savedHeight < 300) savedHeight = 600;
-            settings.set_int('window-width', savedWidth);
-            settings.set_int('window-height', savedHeight);
+            const savedWidth = window.get_allocated_width();
+            const savedHeight = window.get_allocated_height();
+            if (savedWidth > 100 && savedHeight > 100) {
+                settings.set_int('prefs-window-width', savedWidth);
+                settings.set_int('prefs-window-height', savedHeight);
+            }
         };
 
-        // Save window size when the window is closed
-        window.connect('close-request', () => {
-            saveWindowSize();
-        });
+        window.connect('close-request', () => { saveWindowSize(); });
 
         // Create a page and a group for settings
         const page = new Adw.PreferencesPage();
@@ -306,36 +298,35 @@ export default class HeraPreferences extends ExtensionPreferences {
         // Drop Layout seksjon
         const layoutGroup = new Adw.PreferencesGroup({
             title: _('Drop Window Layout'),
-            description: _('Adjust the placement of the floating dialog window'),
+            description: _('Manage the layout and size of the floating dialog window'),
         });
 
-        const createMarginRow = (key, title, subtitle) => {
-            const row = new Adw.SpinRow({
-                title,
-                subtitle,
-                adjustment: new Gtk.Adjustment({
-                    lower: 0,
-                    upper: 500,
-                    step_increment: 1,
-                    page_increment: 10,
-                }),
-            });
-            settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
-            return row;
-        };
-
-        const sideRow = new Adw.ComboRow({
-            title: _('Placement'),
-            subtitle: _('Which side of the screen the window should attach to'),
-            model: new Gtk.StringList({
-                strings: [_('Left'), _('Right')],
-            }),
+        const resetLayoutRow = new Adw.ActionRow({
+            title: _('Reset Layout'),
+            subtitle: _('Restore default placement and size'),
         });
-        settings.bind('drop-side', sideRow, 'selected', Gio.SettingsBindFlags.DEFAULT);
-
-        layoutGroup.add(sideRow);
-        layoutGroup.add(createMarginRow('drop-margin-top', _('Top margin'), _('Pixels from top panel')));
-        layoutGroup.add(createMarginRow('drop-margin-bottom', _('Bottom margin'), _('Pixels from bottom of screen')));
+        const resetBtn = new Gtk.Button({
+            label: _('Reset to Defaults'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['destructive-action'],
+        });
+        resetBtn.connect('clicked', () => {
+            settings.reset('drop-window-x');
+            settings.reset('drop-window-y');
+            settings.reset('drop-window-width');
+            settings.reset('drop-window-height');
+            settings.reset('drop-window-top-margin');
+            settings.reset('drop-window-bottom-margin');
+            settings.reset('drop-window-edge-offset');
+            settings.reset('drop-window-min-width');
+            settings.reset('drop-window-min-height');
+            settings.reset('drop-window-max-display-messages');
+            settings.reset('drop-window-default-scale-width');
+            settings.reset('drop-window-default-max-width');
+            settings.set_boolean('drop-force-reset', true); // Trigger the hard reset in dialog.js
+        });
+        resetLayoutRow.add_suffix(resetBtn);
+        layoutGroup.add(resetLayoutRow);
 
         // Informasjonsgruppe (About)
         const infoGroup = new Adw.PreferencesGroup({
@@ -366,7 +357,7 @@ export default class HeraPreferences extends ExtensionPreferences {
             const aboutWindow = new Adw.AboutWindow({
                 transient_for: window,
                 application_name: _('Agent Interaction'),
-                application_icon: 'hera-state-symbolic',
+                application_icon: 'drop-state-symbolic',
                 developer_name: 'John Erling Blad',
                 developers: ['John Erling Blad'],
                 translator_credits: 'John Erling Blad',

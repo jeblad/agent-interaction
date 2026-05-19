@@ -15,6 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { DropUtils } from './utils.js';
+import { DropResizeHandler } from './resize.js';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -24,61 +26,82 @@ import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
-
-import { HeraUtils } from './utils.js';
-
-const MAX_DISPLAY_MESSAGES = 50;
-
 /**
  * A floating, non-modal window built with St for communicating with an agent.
  */
-export const HeraAccessDialog = GObject.registerClass(
-    { GTypeName: 'HeraAccessDialog' },
-class HeraAccessDialog extends St.BoxLayout {
+export const DropAccessDialog = GObject.registerClass(
+    { GTypeName: 'DropAccessDialog' },
+class DropAccessDialog extends St.Widget {
     _init(agentData, settings) {
         this._settings = settings;
         this._showTimeoutId = 0;
         this._hideTimeoutId = 0;
+        this._animating = false;
         this._surfaceOffset = 0;
         this._surfaceFileIndex = 0; // 0 is current .log, 1 is .log.1, etc.
         this._loadingMore = false;
         this._attachments = []; // List of selected attachments: { file, selected }
         this._signalButtons = {}; // Stores references to buttons
+        this._windowSignals = [];
         this._agent = agentData;
+        
+        this._settingsHandlerId = this._settings.connect('changed', (s, key) => { // eslint-disable-line no-unused-vars
+            if (key === 'drop-force-reset') {
+                if (this._settings.get_boolean('drop-force-reset')) {
+                    this._performHardReset();
+                    this._settings.set_boolean('drop-force-reset', false); // Reset the trigger
+                }
+            } else if (key.startsWith('drop-')) {
+                // Samle opp flere endringer (som ved reset) og kjør refresh én gang
+                if (this._refreshId) GLib.source_remove(this._refreshId);
+                this._refreshId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                    this._refreshLayoutFromSettings();
+                    this._refreshId = 0;
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
+        });
 
-        // Calculate dimensions before initialization
-        const monitor = Main.layoutManager.primaryMonitor;
-        const windowWidth = Math.min(monitor.width * 0.4, 900);
-        const panelHeight = Main.panel.height;
-        this._marginTop = settings.get_int('drop-margin-top');
-        const marginBottom = settings.get_int('drop-margin-bottom');
-        this._side = settings.get_int('drop-side'); // 0 = Left, 1 = Right
-        const edgeOffset = 8;
-        const windowHeight = monitor.height - panelHeight - this._marginTop - marginBottom - edgeOffset;
-        const totalWidth = windowWidth + edgeOffset;
+        this._edgeOffset = this._settings.get_int('drop-window-edge-offset');
+        this._minWidth = this._settings.get_int('drop-window-min-width');
+        this._minHeight = this._settings.get_int('drop-window-min-height');
+        const geo = this._calculateGeometry(false);
+        this._expandedX = geo.x;
 
-        // Initialize the BoxLayout itself
+        // Initialize the Widget
         super._init({
-            style_class: 'hera-drop-outer-container',
-            style: 'background-color: transparent;',
-            vertical: true,
+            style_class: 'drop-outer-container',
             can_focus: true,
             reactive: true,
             track_hover: true,
             x_expand: false,
             y_expand: true,
-            width: totalWidth,
-            height: windowHeight,
+            width: geo.width,
+            height: geo.height,
         });
-        
-        this._setupWindowLayout();
+
+        // Utled side for initial tilstand (0=venstre, 1=høyre)
+        const monitor = Main.layoutManager.primaryMonitor;
+        this._side = (geo.x + geo.width / 2 > monitor.x + monitor.width / 2) ? 1 : 0;
+        this._expandedX = geo.x;
+
+        this._maxDisplayMessages = this._settings.get_int('drop-window-max-display-messages');
+        this._setupResizers(settings, this._edgeOffset);
+        this._setupWindowLayout(geo);
+
+        // Add main content to the dialog, then attach resizers
+        this.add_child(this._mainContent);
+        this._resizers.forEach(resizer => resizer.attach(this._mainContent));
+
         this._setupPaths();
         
-        this._mainContent.add_child(this._createHeader());
-        this._mainContent.add_child(this._createChatArea());
-        this._mainContent.add_child(this._createFileBin());
-        this._mainContent.add_child(this._createInputEntry());
-        
+        this._mainContent.add_child(this._createHeader()); // Wrapped in safeCallback
+        this._mainContent.add_child(this._createChatArea()); // Wrapped in safeCallback
+        this._mainContent.add_child(this._createFileBin()); // Wrapped in safeCallback
+        this._mainContent.add_child(this._createInputEntry()); // Wrapped in safeCallback
+
+        this._calculateGeometry(true);
+
         // Setup Menu Manager for signal dropdown
         this._menuManager = new PopupMenu.PopupMenuManager(this);
         
@@ -86,41 +109,225 @@ class HeraAccessDialog extends St.BoxLayout {
         this._mainContent.add_child(actionRow);
 
         this._setupHoverLogic();
+        this._setupWindowTracking();
+        this._syncHoverState();
         // Initial load and setup
         this._loadSurfaceHistory();
         this._watchOutPipe();
         this._appendMessage('system', _('Session started. Communication: %s.in/out').format(agentData.uuid), null, false, false, true);
     }
 
-    _setupWindowLayout() {
+    _setupResizers(settings, edgeOffset) {
+        const common = {
+            onDragStart: () => {
+                this.remove_all_transitions();
+                if (this._hideTimeoutId) { GLib.source_remove(this._hideTimeoutId); this._hideTimeoutId = 0; }
+                if (this._showTimeoutId) { GLib.source_remove(this._showTimeoutId); this._showTimeoutId = 0; }
+            },
+            onDragEnd: () => { if (!this.hover) this._onMouseLeave(); }
+        };
+
+        this._resizers = [];
+        const updateContentAndResizers = () => {
+            this._mainContent.set_width(this.width - (this._edgeOffset * 2));
+            this._mainContent.set_height(this.height - (this._edgeOffset * 2));
+            this._resizers.forEach(r => r.updateLayout());
+            if (this.x !== this._expandedX) this._expandedX = this.x; // Keep _expandedX in sync if dialog moves
+        };
+
+        // 1. Inner Side Resizer
+        this._resizers.push(new DropResizeHandler(this, settings, {
+            ...common,
+            minWidth: this._minWidth, minHeight: this._minHeight,
+            edge: (this._side === 1) ? 'left' : 'right',
+            edgeOffset,
+            callbacks: { onResize: updateContentAndResizers }
+        }));
+
+        // 2. Top Resizer
+        this._resizers.push(new DropResizeHandler(this, settings, {
+            ...common,
+            minWidth: this._minWidth, minHeight: this._minHeight,
+            edge: 'top',
+            edgeOffset,
+            callbacks: { onResize: updateContentAndResizers }
+        }));
+
+        // 3. Bottom Resizer
+        this._resizers.push(new DropResizeHandler(this, settings, {
+            ...common,
+            minWidth: this._minWidth, minHeight: this._minHeight,
+            edge: 'bottom',
+            edgeOffset,
+            callbacks: { onResize: updateContentAndResizers }
+        }));
+
+        // 4. Outer Side Resizer
+        this._resizers.push(new DropResizeHandler(this, settings, {
+            ...common,
+            minWidth: this._minWidth, minHeight: this._minHeight,
+            edge: (this._side === 1) ? 'right' : 'left',
+            edgeOffset,
+            callbacks: { onResize: updateContentAndResizers }
+        }));
+    }
+
+    /**
+     * Beregner ideell geometri for vinduet basert på gjeldende eller standard innstillinger.
+     * Dette sikrer en konsistent "clean slate" både ved oppstart og reset.
+     * @param {boolean} useDefaults - Om standardverdier fra schema skal brukes.
+     */
+    _calculateGeometry(useDefaults = false) {
+        if (!useDefaults) {
+            const x = this._settings.get_int('drop-window-x');
+            const y = this._settings.get_int('drop-window-y');
+            const width = this._settings.get_int('drop-window-width');
+            const height = this._settings.get_int('drop-window-height');
+            
+            if (x !== -1 && y !== -1 && width !== -1 && height !== -1)
+                return { x, y, width, height };
+        }
+
+        // Fallback / Reset (Clean Slate): Beregn geometri fra monitor/panel
         const monitor = Main.layoutManager.primaryMonitor;
         const panelHeight = Main.panel.height;
-        const isRight = this._side === 1;
-        const totalWidth = this.width;
-        const edgeOffset = 8;
 
-        this._mainContent = new St.BoxLayout({
-            style_class: 'hera-drop-window',
-            style: `background-color: rgba(30, 30, 30, 0.95); 
-                    border: 1px solid rgba(255,255,255,0.1); 
-                    border-radius: 24px;
-                    padding: 16px;
-                    margin-${isRight ? 'right' : 'left'}: ${edgeOffset}px;`,
-            vertical: true,
-            x_expand: true,
-            y_expand: true,
-        });
-        this.add_child(this._mainContent);
+        const topMargin = this._settings.get_int('drop-window-top-margin');
+        const bottomMargin = this._settings.get_int('drop-window-bottom-margin');
 
-        const xPos = isRight 
-            ? monitor.x + monitor.width - totalWidth
-            : monitor.x;
+        // Get configurable default width parameters
+        const defaultWidthScale = this._settings.get_double('drop-window-default-scale-width');
+        const maxDefaultWidth = this._settings.get_int('drop-window-default-max-width');
+        const width = Math.min(monitor.width * defaultWidthScale, maxDefaultWidth) + (2 * this._edgeOffset);
         
-        this.set_position(xPos, monitor.y + panelHeight + this._marginTop);
+        let y = monitor.y + panelHeight - this._edgeOffset;
+        if (y < monitor.y + topMargin)
+            y = monitor.y + topMargin;
 
-        // Start in "hidden" (collapsed) state
-        this.translation_x = isRight ? (this.width - 1) : -(this.width - 1);
-        this._isCollapsed = true;
+        const height = (monitor.y + monitor.height) - bottomMargin - y + this._edgeOffset;
+
+        const x = Clutter.get_default_text_direction() === Clutter.TextDirection.RTL
+            ? monitor.x - this._edgeOffset
+            : monitor.x + monitor.width - width + this._edgeOffset;
+
+        return { x, y, width, height };
+    }
+
+    _performHardReset() {
+        this._refreshLayoutFromSettings(true);
+    }
+
+    /**
+     * Sjekker om Drop-vinduet overlapper med andre applikasjonsvinduer
+     * på nåværende monitor og workspace.
+     * @returns {boolean} true hvis vinduet er okludert eller okluderer andre.
+     */
+    _checkOcclusion() {
+        const monitor = Main.layoutManager.primaryMonitor;
+        const workspace = global.workspace_manager.get_active_workspace();
+
+        // Sjekk mot arealet der vinduet faktisk vises (ekspandert tilstand)
+        // Vi legger til en liten margin (2px) for å unngå "kant-i-kant" problemer
+        const myRect = {
+            x1: this._expandedX + this._edgeOffset + 2,
+            y1: this.y + this._edgeOffset + 2,
+            x2: this._expandedX + this.width - this._edgeOffset - 2,
+            y2: this.y + this.height - this._edgeOffset - 2
+        };
+
+        const NORMAL_WINDOW_TYPES = [0, 3, 4]; // Normal, Dialog, Modal
+        const windowActors = global.get_window_actors().filter(actor => {
+            const win = actor.get_meta_window();
+            return win &&
+                   win.get_monitor() === monitor.index &&
+                   (win.get_workspace() === workspace || win.is_on_all_workspaces()) &&
+                   win.showing_on_its_workspace() &&
+                   !win.is_skip_taskbar() &&
+                   NORMAL_WINDOW_TYPES.includes(win.get_window_type());
+        });
+
+        return windowActors.some(actor => {
+            const rect = actor.get_meta_window().get_frame_rect();
+            // AABB kollisjonsdeteksjon mellom Meta.Rectangle og vårt målområde
+            return !(rect.x >= myRect.x2 ||
+                     (rect.x + rect.width) <= myRect.x1 ||
+                     rect.y >= myRect.y2 ||
+                     (rect.y + rect.height) <= myRect.y1);
+        });
+    }
+
+    _setupWindowTracking() {
+        const trackWindow = (win) => {
+            if (!win) return;
+            this._windowSignals.push({ win, id: win.connect('position-changed', () => this._syncHoverState()) });
+            this._windowSignals.push({ win, id: win.connect('size-changed', () => this._syncHoverState()) });
+        };
+
+        this._displaySignals = [
+            global.display.connect('window-created', (d, win) => trackWindow(win)),
+            global.display.connect('restacked', () => this._syncHoverState()),
+            global.window_manager.connect('switch-workspace', () => this._syncHoverState()),
+        ];
+
+        // Start sporing av eksisterende vinduer
+        global.get_window_actors().forEach(actor => trackWindow(actor.get_meta_window()));
+    }
+
+    _clearWindowTracking() {
+        if (this._displaySignals)
+            this._displaySignals.forEach(id => global.display.disconnect(id));
+        if (this._windowSignals)
+            this._windowSignals.forEach(obj => obj.win.disconnect(obj.id));
+    }
+
+    _refreshLayoutFromSettings(forceDefaults = false) {
+        const geo = this._calculateGeometry(forceDefaults);
+        const monitor = Main.layoutManager.primaryMonitor;
+        
+        this._side = (geo.x + geo.width / 2 > monitor.x + monitor.width / 2) ? 1 : 0;
+        this._expandedX = geo.x;
+
+        // Beregn translation som flytter vinduet helt ut av skjermen fra der det står
+        let targetTranslation = 0;
+        if (this._isCollapsed) {
+            targetTranslation = (this._side === 1)
+                ? (monitor.x + monitor.width - geo.x - this._edgeOffset) 
+                : -(geo.x + geo.width - monitor.x - this._edgeOffset);
+        }
+
+        this.remove_all_transitions();
+        this._animating = true;
+
+        this.ease({
+            x: geo.x,
+            y: geo.y,
+            width: geo.width,
+            height: geo.height,
+            translation_x: targetTranslation,
+            duration: this._isCollapsed ? 0 : 500,
+            mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+            onComplete: () => {
+                this._mainContent.set_size(geo.width - (this._edgeOffset * 2), geo.height - (this._edgeOffset * 2));
+                this._resizers.forEach(r => r.updateLayout());
+                this._animating = false;
+            }
+        });
+    }
+
+    _setupWindowLayout(geo) {
+        this._mainContent = new St.BoxLayout({
+            style_class: 'drop-window',
+            vertical: true,
+            x: this._edgeOffset,
+            y: this._edgeOffset,
+            width: geo.width - (this._edgeOffset * 2),
+            height: geo.height - (this._edgeOffset * 2),
+        });
+
+        this.set_position(geo.x, geo.y);
+        this._expandedX = geo.x;
+        this.translation_x = (this._side === 1) ? (geo.width - this._edgeOffset * 2) : -(geo.width - this._edgeOffset * 2);
+        this._isCollapsed = true; // Ensure it starts collapsed
     }
 
     _setupPaths() {
@@ -153,23 +360,23 @@ class HeraAccessDialog extends St.BoxLayout {
     }
 
     _createHeader() {
-        const header = new St.BoxLayout({ vertical: false, style: 'margin-bottom: 8px;' });
+        const header = new St.BoxLayout({ vertical: false, style_class: 'drop-header' });
 
         const displayName = this._getAgentDisplayName();
 
         const titleLabel = new St.Label({
             text: displayName.toUpperCase(),
-            style: 'font-weight: bold; font-size: 1.1em; color: #3584e4;',
+            style_class: 'drop-title',
             y_align: Clutter.ActorAlign.CENTER,
             x_expand: true,
             reactive: true,
             track_hover: true,
         });
 
-        titleLabel.connect('button-press-event', () => {
+        titleLabel.connect('button-press-event', DropUtils.safeCallback(() => {
             this._showAgentReport();
             return Clutter.EVENT_STOP;
-        });
+        }, 'HeraHeaderClick'));
 
         header.add_child(titleLabel);
         return header;
@@ -181,15 +388,15 @@ class HeraAccessDialog extends St.BoxLayout {
             vscrollbar_policy: St.PolicyType.AUTOMATIC,
             y_expand: true,
             x_expand: true,
-            style_class: 'hera-chat-scroll',
+            style_class: 'drop-chat-scroll',
         });
         
-        this._vAdj = this._scroll.get_vadjustment();
-        this._vAdj.connect('notify::value', HeraUtils.safeCallback(() => {
+        this._vAdj = this._scroll.get_vadjustment(); // eslint-disable-line no-unused-vars
+        this._vAdj.connect('notify::value', DropUtils.safeCallback(() => {
             if (this._vAdj.value <= this._vAdj.lower && !this._loadingMore && this._surfaceOffset > 0) {
                 this._loadMoreSurfaceHistory();
             }
-        }, 'HeraScroll'));
+        }, 'DropScroll'));
 
         this._logBin = new St.BoxLayout({
             vertical: true,
@@ -204,15 +411,14 @@ class HeraAccessDialog extends St.BoxLayout {
     _createFileBin() {
         this._fileBin = new St.BoxLayout({
             vertical: false,
-            style: 'margin-top: 8px; padding: 4px; background: rgba(255,255,255,0.03); border-radius: 14px; spacing: 6px;',
             x_expand: true,
             y_expand: false,
-            style_class: 'hera-file-bin'
+            style_class: 'drop-file-bin'
         });
-
+        
         this._chipsBox = new St.BoxLayout({
             vertical: false,
-            style: 'spacing: 6px;',
+            style_class: 'drop-file-chips-box',
             x_expand: true,
         });
         this._fileBin.add_child(this._chipsBox);
@@ -221,12 +427,10 @@ class HeraAccessDialog extends St.BoxLayout {
             child: new St.Icon({
                 icon_name: 'mail-attachment-symbolic',
                 icon_size: 14,
-                style: 'color: rgba(255,255,255,0.6);'
             }),
             style_class: 'button',
-            style: 'border-radius: 12px; padding: 6px 10px;'
         });
-        attachBtn.connect('clicked', () => this._onAttachClicked());
+        attachBtn.connect('clicked', DropUtils.safeCallback(() => this._onAttachClicked(), 'DropAttachClick'));
         this._fileBin.add_child(attachBtn);
 
         return this._fileBin;
@@ -238,7 +442,7 @@ class HeraAccessDialog extends St.BoxLayout {
             can_focus: true,
             reactive: true,
             x_expand: true,
-            style: 'margin-top: 10px; background: rgba(255,255,255,0.05); border-radius: 20px; padding: 8px 15px;'
+            style_class: 'drop-input-entry'
         });
 
         const clutterText = this._entry.clutter_text;
@@ -248,12 +452,12 @@ class HeraAccessDialog extends St.BoxLayout {
         clutterText.editable = true;
         clutterText.reactive = true;
 
-        this._entry.connect('button-press-event', HeraUtils.safeCallback(() => {
+        this._entry.connect('button-press-event', DropUtils.safeCallback(() => {
             clutterText.grab_key_focus();
             return Clutter.EVENT_PROPAGATE;
-        }, 'HeraEntryClick'));
-
-        clutterText.connect('key-press-event', HeraUtils.safeCallback((actor, event) => {
+        }, 'DropEntryClick'));
+        
+        clutterText.connect('key-press-event', DropUtils.safeCallback((actor, event) => {
             const symbol = event.get_key_symbol();
             const modifiers = event.get_state();
             const hasShift = (modifiers & Clutter.ModifierType.SHIFT_MASK) !== 0;
@@ -267,36 +471,29 @@ class HeraAccessDialog extends St.BoxLayout {
                 }
             }
             return Clutter.EVENT_PROPAGATE;
-        }, 'HeraKeyPress'));
+        }, 'DropKeyPress'));
         return this._entry;
     }
 
     _createActionRow() {
         const actionRow = new St.BoxLayout({
             vertical: false,
-            style: 'margin-top: 10px; spacing: 8px;',
+            style_class: 'drop-action-row',
             x_expand: true
         });
 
         const createSignalBtn = (id, labelOrIcon, signal, isLeftGroup = false) => {
             const isIcon = labelOrIcon.endsWith('-symbolic');
-            const content = new St.BoxLayout({ style: 'spacing: 0;' });
+            const content = new St.BoxLayout({ style_class: 'drop-signal-content' });
             
             let label = null;
             let icon = null;
 
             if (isIcon) {
-                icon = new St.Icon({
-                    icon_name: labelOrIcon,
-                    icon_size: 14,
-                    style: 'color: rgba(255,255,255,0.7);'
-                });
+                icon = new St.Icon({ icon_name: labelOrIcon, icon_size: 14 });
                 content.add_child(icon);
             } else {
-                label = new St.Label({
-                    text: labelOrIcon,
-                    style: 'font-weight: bold; font-size: 0.85em; color: rgba(255,255,255,0.7);'
-                });
+                label = new St.Label({ text: labelOrIcon, style_class: 'drop-signal-label' });
                 content.add_child(label);
             }
 
@@ -304,22 +501,16 @@ class HeraAccessDialog extends St.BoxLayout {
                 icon_name: 'process-working-symbolic',
                 icon_size: 14,
                 visible: false,
-                style: 'color: rgba(255,255,255,0.8);'
             });
             content.add_child(spinner);
 
-            const borderRadius = isLeftGroup 
-                ? 'border-radius: 16px 0 0 16px;' 
-                : 'border-radius: 16px;';
-
             const btn = new St.Button({
                 child: content,
-                style_class: 'button',
+                style_class: `button drop-signal-button ${isLeftGroup ? 'drop-signal-button-left' : ''}`,
                 can_focus: true,
-                style: `${borderRadius} padding: 8px 12px; ${isLeftGroup ? 'margin-right: 0;' : ''}`
             });
 
-            btn.connect('clicked', () => this._sendSignal(signal));
+            btn.connect('clicked', DropUtils.safeCallback(() => this._sendSignal(signal), `DropSignalBtn_${id}`));
             
             this._signalButtons[id] = {
                 button: btn,
@@ -333,20 +524,18 @@ class HeraAccessDialog extends St.BoxLayout {
         };
 
         // Create a grouped signal button (Main action + Dropdown)
-        const sigGroup = new St.BoxLayout({ style: 'spacing: 0;' });
+        const sigGroup = new St.BoxLayout({ style_class: 'drop-signal-group' });
         actionRow.add_child(sigGroup);
 
         const intBtn = createSignalBtn('INT', _('Interrupt'), 'INT', true);
         sigGroup.add_child(intBtn);
 
         const menuBtn = new St.Button({
-            style_class: 'button',
+            style_class: 'button drop-signal-dropdown-button',
             child: new St.Icon({ 
                 icon_name: 'pan-down-symbolic', 
                 icon_size: 12, 
-                style: 'color: rgba(255,255,255,0.6);' 
             }),
-            style: 'border-radius: 0 16px 16px 0; padding: 8px 6px; margin-left: -1px;'
         });
         sigGroup.add_child(menuBtn);
 
@@ -364,12 +553,12 @@ class HeraAccessDialog extends St.BoxLayout {
             { label: _('Interrupt (SIGINT)'), sig: 'INT' },
             { label: _('Terminate (SIGTERM)'), sig: 'TERM' },
             { label: _('Kill (SIGKILL)'), sig: 'KILL' },
-        ].forEach(item => {
+        ].forEach(DropUtils.safeCallback(item => {
             const mi = new PopupMenu.PopupMenuItem(item.label);
             mi.connect('activate', () => this._sendSignal(item.sig));
             this._sigMenu.addMenuItem(mi);
-        });
-        menuBtn.connect('clicked', () => this._sigMenu.toggle());
+        }, 'DropSignalMenuItem'));
+        menuBtn.connect('clicked', DropUtils.safeCallback(() => this._sigMenu.toggle(), 'DropSignalMenuToggle'));
 
         actionRow.add_child(createSignalBtn('STOP', 'media-playback-pause-symbolic', 'STOP'));
         actionRow.add_child(createSignalBtn('CONT', 'media-playback-start-symbolic', 'CONT'));
@@ -379,10 +568,10 @@ class HeraAccessDialog extends St.BoxLayout {
 
         const aboutBtn = new St.Button({
             label: _('Agent Info'),
-            style: 'color: #3584e4; text-decoration: underline; font-size: 0.85em;',
+            style_class: 'drop-about-button',
             y_align: Clutter.ActorAlign.CENTER
         });
-        aboutBtn.connect('clicked', () => this._showAgentReport());
+        aboutBtn.connect('clicked', DropUtils.safeCallback(() => this._showAgentReport(), 'DropAboutBtn'));
         actionRow.add_child(aboutBtn);
         return actionRow;
     }
@@ -400,25 +589,37 @@ class HeraAccessDialog extends St.BoxLayout {
 
     _setupHoverLogic() {
         this._isCollapsed = true;
-        this.connect('notify::hover', () => {
-            if (this.hover)
-                this._onMouseEnter();
-            else
-                this._onMouseLeave();
-        });
+        this.connect('notify::hover', DropUtils.safeCallback(() => {
+            this._syncHoverState();
+        }, 'DropHoverNotify'));
+    }
+
+    _syncHoverState() {
+        if (this._animating) return;
+        const isAnyDragging = this._resizers.some(r => r.isDragging);
+        if (isAnyDragging) return;
+
+        const occluded = this._checkOcclusion();
+
+        if (this.hover) {
+            if (this._isCollapsed) this._onMouseEnter();
+        } else {
+            if (occluded && !this._isCollapsed) this._onMouseLeave();
+            else if (!occluded && this._isCollapsed) this._onMouseEnter();
+        }
     }
 
     _onAttachClicked() {
         const title = _('Select Context Files');
         // Use an async IIFE to handle the promise from selectFilesFromPortal
         (async () => {
-            try {
-                const uris = await HeraUtils.selectFilesFromPortal(title, true);
+            try { // eslint-disable-line no-empty
+                const uris = await DropUtils.selectFilesFromPortal(title, true);
                 for (const uri of uris) {
-                    if (this._attachments.some(entry => entry.file.get_uri() === uri)) continue;
+                    if (this._attachments.some(entry => entry.file.get_uri() === uri)) continue; // This is fine
                     const file = Gio.File.new_for_uri(uri);
-                    if (await HeraUtils.isPlainText(file)) {
-                        this._attachments.push({ file, selected: true });
+                    if (await DropUtils.isPlainText(file)) {
+                        this._attachments.push({ file, selected: true }); // eslint-disable-line max-len
                     } else {
                         this._appendMessage('system', _('File “%s” is not plain text and was ignored.').format(file.get_basename()), null, false);
                     }
@@ -440,8 +641,7 @@ class HeraAccessDialog extends St.BoxLayout {
         
         this._attachments.forEach(entry => {
             const chip = new St.BoxLayout({
-                style_class: 'hera-file-chip',
-                style: 'background: rgba(255,255,255,0.08); border-radius: 12px; padding: 6px 10px; spacing: 6px;',
+                style_class: 'drop-file-chip',
                 x_align: Clutter.ActorAlign.START,
                 reactive: true,
                 track_hover: true,
@@ -450,7 +650,8 @@ class HeraAccessDialog extends St.BoxLayout {
             const statusIcon = new St.Icon({
                 icon_name: entry.selected ? 'object-select-symbolic' : 'dialog-close-symbolic',
                 icon_size: 12,
-                style: `color: ${entry.selected ? '#7cfc00' : '#ff8c00'}; margin-right: 6px;`,
+                style_class: entry.selected ? 'drop-file-chip-icon-selected' : 'drop-file-chip-icon-deselected',
+                style: 'margin-right: 6px;'
             });
 
             const label = new St.Label({ 
@@ -460,56 +661,88 @@ class HeraAccessDialog extends St.BoxLayout {
 
             chip.add_child(statusIcon);
             chip.add_child(label);
-            chip.connect('button-press-event', () => {
+            chip.connect('button-press-event', DropUtils.safeCallback(() => {
                 entry.selected = !entry.selected;
                 this._updateFileBin();
                 return Clutter.EVENT_STOP;
-            });
+            }, 'DropFileChipClick'));
             this._chipsBox.add_child(chip);
         });
     }
 
     _onMouseLeave() {
-        if (this._entry.clutter_text.has_focus || (this._sigMenu && this._sigMenu.isOpen)) return;
+        if (this._animating || this._isCollapsed) return;
+        const isAnyDragging = this._resizers.some(r => r.isDragging);
+        if (isAnyDragging || this._entry.clutter_text.has_focus || (this._sigMenu && this._sigMenu.isOpen) || !this._checkOcclusion())
+            return;
         
         if (this._hideTimeoutId) {
             GLib.source_remove(this._hideTimeoutId);
             this._hideTimeoutId = 0;
         }
         
-        this._hideTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+        this._hideTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, DropUtils.safeCallback(() => {
             this._hideTimeoutId = 0;
-            const targetTranslation = this._side === 1 ? (this.width - 1) : -(this.width - 1);
+            const stillOccluded = this._checkOcclusion();
+            if (this._resizers.some(r => r.isDragging) || !stillOccluded || this.hover) 
+                return GLib.SOURCE_REMOVE;
+
+            const monitor = Main.layoutManager.primaryMonitor; // eslint-disable-line no-unused-vars
+            if (!this._isCollapsed) this._expandedX = this.x;
+            this._animating = true; // Sett flagget FØR GSettings for å blokkere "changed"-loop
+
+            // Utled skjul-retning fra nåværende posisjon
+            const isRight = (this.x + this.width / 2 > monitor.x + monitor.width / 2);
+            const targetTranslation = isRight 
+                ? (monitor.x + monitor.width - this.x - this._edgeOffset) 
+                : -(this.x + this.width - monitor.x - this._edgeOffset);
+
             this.ease({
+                x: this.x,
                 translation_x: targetTranslation,
                 duration: 500,
                 mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
-                onComplete: () => { this._isCollapsed = true; }
+                onComplete: DropUtils.safeCallback(() => {
+                    this._isCollapsed = true;
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, DropUtils.safeCallback(() => {
+                        this._animating = false;
+                        this._syncHoverState();
+                        return GLib.SOURCE_REMOVE;
+                    }, 'DropHideCooldown'));
+                }, 'DropHideComplete')
             });
             return GLib.SOURCE_REMOVE;
-        });
+        }, 'DropHideTimeout'));
     }
 
     _onMouseEnter() {
+        if (this._animating || !this._isCollapsed || this._resizers.some(r => r.isDragging)) return;
+
         if (this._hideTimeoutId) {
             GLib.source_remove(this._hideTimeoutId);
             this._hideTimeoutId = 0;
         }
-        if (this._showTimeoutId) return;
-        this._showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+        if (this._showTimeoutId) return; // eslint-disable-line no-empty
+        this._showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, DropUtils.safeCallback(() => {
             this._showTimeoutId = 0;
+            this._animating = true;
             this.ease({
+                x: this._expandedX,
                 translation_x: 0,
                 duration: 500,
                 mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
-                onComplete: () => { 
-                    this._isCollapsed = false; 
-                        // Give focus to the entry field when the window is fully expanded
+                onComplete: DropUtils.safeCallback(() => {
+                    this._isCollapsed = false;
                     this._entry.clutter_text.grab_key_focus();
-                }
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, DropUtils.safeCallback(() => {
+                        this._animating = false;
+                        this._syncHoverState();
+                        return GLib.SOURCE_REMOVE;
+                    }, 'DropShowCooldown'));
+                }, 'DropShowComplete')
             });
             return GLib.SOURCE_REMOVE;
-        });
+        }, 'DropShowTimeout'));
     }
 
     /**
@@ -528,24 +761,24 @@ class HeraAccessDialog extends St.BoxLayout {
         const isSystem = sender === 'system';
         const isMetaMsg = isMeta || isSystem;
 
-        let sideMargin = isUser 
-            ? `margin-left: 60px; ${isMetaMsg ? 'margin-right: 40px; opacity: 0.8;' : ''}` 
-            : `margin-right: 60px; ${isMetaMsg ? 'margin-left: 40px; opacity: 0.8;' : ''}`;
+        const styleClasses = ['drop-message-bubble'];
+        if (isUser) styleClasses.push('drop-message-user');
+        else if (isSystem) styleClasses.push('drop-message-system');
+        else styleClasses.push('drop-message-agent');
         
-        if (indent) sideMargin += isUser ? 'margin-left: 40px;' : 'margin-right: 40px;';
+        if (isMetaMsg) styleClasses.push('drop-message-meta');
+        if (indent) styleClasses.push('drop-message-indented');
 
         const msgBox = new St.BoxLayout({
             vertical: true,
-            style: `margin-bottom: 12px; padding: 10px; border-radius: 12px; 
-                    ${sideMargin} 
-                    background: ${isUser ? 'rgba(53, 132, 228, 0.2)' : 'rgba(255,255,255,0.05)'};`,
+            style_class: styleClasses.join(' '),
             x_align: isUser ? Clutter.ActorAlign.END : (isSystem ? Clutter.ActorAlign.CENTER : Clutter.ActorAlign.START),
         });
 
         const senderName = isUser ? _('You') : this._getAgentDisplayName();
         const meta = new St.Label({
             text: _('%s • %s').format(senderName, displayTime),
-            style: 'font-size: 0.75em; color: #888; margin-bottom: 2px;'
+            style_class: 'drop-message-meta-label'
         });
         msgBox.add_child(meta);
 
@@ -553,10 +786,10 @@ class HeraAccessDialog extends St.BoxLayout {
             msgBox.add_child(this._createReportGrid(text));
         } else if (text && text.length > 0) {
             // Escape agent output to prevent Pango markup injection
-            const displayedText = (sender === 'agent' || sender === 'system') ? HeraUtils.escapePango(text) : text;
+            const displayedText = (sender === 'agent' || sender === 'system') ? DropUtils.escapePango(text) : text;
             const content = new St.Label({
                 text: displayedText,
-                style_class: 'hera-message-content',
+                style_class: 'drop-message-content',
                 x_expand: true,
             });
             content.clutter_text.line_wrap = true;
@@ -566,9 +799,9 @@ class HeraAccessDialog extends St.BoxLayout {
         }
 
         if (attachments.length > 0) {
-            const attachmentsRow = new St.BoxLayout({ vertical: false, style: 'margin-top: 6px; spacing: 6px;', x_expand: true });
+            const attachmentsRow = new St.BoxLayout({ vertical: false, style_class: 'drop-message-attachments', x_expand: true });
             attachments.forEach(file => {
-                const chip = new St.BoxLayout({ vertical: false, style: 'background: rgba(255,255,255,0.08); border-radius: 12px; padding: 4px 10px;' });
+                const chip = new St.BoxLayout({ vertical: false, style_class: 'drop-message-attachment-chip' });
                 // Ensure basename is available, or use a placeholder
                 const fileName = file.get_basename ? file.get_basename() : String(file);
                 chip.add_child(new St.Label({ text: fileName, style: 'font-size: 0.8em; color: #ddd;' }));
@@ -580,14 +813,14 @@ class HeraAccessDialog extends St.BoxLayout {
     }
 
     _createReportGrid(data) {
-        const grid = new St.BoxLayout({ vertical: true, style: 'margin-top: 4px; spacing: 2px;' });
+        const grid = new St.BoxLayout({ vertical: true, style_class: 'drop-report-grid' });
         for (const [key, value] of Object.entries(data)) {
-            const row = new St.BoxLayout({ vertical: false, style: 'spacing: 10px;' });
+            const row = new St.BoxLayout({ vertical: false, style_class: 'drop-report-row' });
             const keyLabel = new St.Label({ 
                 text: `${key}:`, 
-                style: 'font-weight: bold; font-size: 0.85em; color: #888; width: 85px;' 
+                style_class: 'drop-report-key'
             });
-            const valLabel = new St.Label({ text: String(value), style: 'font-size: 0.85em; color: #eee;' });
+            const valLabel = new St.Label({ text: String(value), style_class: 'drop-report-val' });
             row.add_child(keyLabel);
             row.add_child(valLabel);
             grid.add_child(row);
@@ -601,15 +834,15 @@ class HeraAccessDialog extends St.BoxLayout {
         const displayTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         // --- Input Filtering (User to Agent) ---
-        // For user input, `HeraUtils.sendToAgent` already uses TextEncoder, which handles basic encoding for transport.
+        // For user input, `HeraUtils.sendToAgent` already uses TextEncoder, which handles basic encoding for transport. // eslint-disable-line max-len
         // If specific filtering (e.g., removing certain characters or patterns) is needed *before* sending to the agent,
         // it should be implemented here or in HeraUtils.sendToAgent. For a general chat, usually all text is allowed.
         // The agent itself should be robust against malicious input.
 
         if (!skipLimit) {
             const children = this._logBin.get_children();
-            if (children.length >= MAX_DISPLAY_MESSAGES) {
-                if (prepend) children[children.length - 1].destroy();
+            if (children.length >= this._maxDisplayMessages) {
+                if (prepend) children[children.length - 1].destroy(); // eslint-disable-line max-len
                 else children[0].destroy();
             }
         }
@@ -635,13 +868,13 @@ class HeraAccessDialog extends St.BoxLayout {
     _renderLogLines(lines, prepend) {
         if (prepend) {
             for (let i = lines.length - 1; i >= 0; i--) {
-                const msg = HeraUtils.parseLogLine(lines[i]);
-                if (msg)
+                const msg = DropUtils.parseLogLine(lines[i]);
+                if (msg) // eslint-disable-line no-empty
                     this._appendMessage(msg.sender, msg.text, msg.timestamp, false, true, true, msg.isMeta, msg.attachments);
             }
         } else {
             lines.forEach(line => {
-                const msg = HeraUtils.parseLogLine(line);
+                const msg = DropUtils.parseLogLine(line);
                 if (msg)
                     this._appendMessage(msg.sender, msg.text, msg.timestamp, false, false, true, msg.isMeta, msg.attachments);
             });
@@ -656,7 +889,7 @@ class HeraAccessDialog extends St.BoxLayout {
             const outputStream = file.append_to(Gio.FileCreateFlags.NONE, null);
             outputStream.write_all(entry, null);
             outputStream.close(null);
-        } catch (e) { console.error(`Hera: Failed to save surface log: ${e.message}`); }
+        } catch (e) { console.error(`Drop: Failed to save surface log: ${e.message}`); }
     }
 
     _loadSurfaceHistory() {
@@ -667,12 +900,12 @@ class HeraAccessDialog extends St.BoxLayout {
             const [success, contents] = file.load_contents(null);
             if (success) {
                 const allLines = new TextDecoder().decode(contents).split('\n').filter(l => l.trim());
-                const recentLines = allLines.slice(-MAX_DISPLAY_MESSAGES);
+                const recentLines = allLines.slice(-this._maxDisplayMessages);
                 this._surfaceOffset = recentLines.length;
                 this._renderLogLines(recentLines, false);
                 this._appendMessage('system', _('--- Session Restored ---'), null, false, false, true);
             }
-        } catch (e) { console.error(`Hera: Failed to load surface history: ${e.message}`); }
+        } catch (e) { console.error(`Drop: Failed to load surface history: ${e.message}`); }
     }
 
     _loadMoreSurfaceHistory() {
@@ -704,7 +937,7 @@ class HeraAccessDialog extends St.BoxLayout {
                         return;
                     }
 
-                    const res = HeraUtils.getLinesToDisplay(allLines, this._surfaceOffset, Math.floor(MAX_DISPLAY_MESSAGES / 2));
+                    const res = DropUtils.getLinesToDisplay(allLines, this._surfaceOffset, Math.floor(this._maxDisplayMessages / 2)); // eslint-disable-line max-len
                     if (res.lines.length > 0) {
                         this._renderLogLines(res.lines, true);
                         this._surfaceOffset = res.newOffset;
@@ -715,7 +948,7 @@ class HeraAccessDialog extends St.BoxLayout {
                     }
                 }
             } catch (e) {
-                console.error(`Hera: Error loading rotated surface history: ${e.message}`);
+                console.error(`Drop: Error loading rotated surface history: ${e.message}`);
             }
             this._loadingMore = false;
         };
@@ -724,7 +957,7 @@ class HeraAccessDialog extends St.BoxLayout {
     }
 
     show() {
-        if (!this.get_parent()) Main.layoutManager.addChrome(this);
+        if (!this.get_parent()) Main.layoutManager.addChrome(this, { trackHover: true });
 
         const parent = this.get_parent();
         if (parent) {
@@ -744,6 +977,14 @@ class HeraAccessDialog extends St.BoxLayout {
         if (this._hideTimeoutId) GLib.source_remove(this._hideTimeoutId);
         if (this._showTimeoutId) GLib.source_remove(this._showTimeoutId);
 
+        if (this._settingsHandlerId) {
+            this._settings.disconnect(this._settingsHandlerId);
+            this._settingsHandlerId = 0;
+        }
+        this._clearWindowTracking();
+
+        this._resizers.forEach(r => r.destroy());
+
         if (this._sigMenu) {
             this._sigMenu.destroy();
             this._sigMenu = null;
@@ -758,10 +999,10 @@ class HeraAccessDialog extends St.BoxLayout {
         const status = agentData.status;
         const sActive = this._settings.get_string('status-active');
         const sInactive = this._settings.get_string('status-inactive');
-        if (HeraUtils.isStatusMatch(sInactive, status)) {
+        if (DropUtils.isStatusMatch(sInactive, status)) {
             this._setButtonState('STOP', 'active');
             this._setButtonState('CONT', 'idle');
-        } else if (HeraUtils.isStatusMatch(sActive, status)) {
+        } else if (DropUtils.isStatusMatch(sActive, status)) {
             this._setButtonState('CONT', 'active');
             this._setButtonState('STOP', 'idle');
         }
@@ -769,20 +1010,20 @@ class HeraAccessDialog extends St.BoxLayout {
 
     _watchOutPipe() {
         const file = Gio.File.new_for_path(this._outPipePath);
-        file.read_async(GLib.PRIORITY_DEFAULT, null, (file, res) => {
+        file.read_async(GLib.PRIORITY_DEFAULT, null, DropUtils.safeCallback((file, res) => {
             try {
-                const stream = file.read_finish(res);
+                const stream = file.read_finish(res); // eslint-disable-line no-empty
                 const dataStream = new Gio.DataInputStream({ base_stream: stream, close_base_stream: true });
                 this._readNextLine(dataStream);
             } catch (e) {
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => { this._watchOutPipe(); return GLib.SOURCE_REMOVE; });
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, DropUtils.safeCallback(() => { this._watchOutPipe(); return GLib.SOURCE_REMOVE; }, 'DropWatchRetry'));
             }
-        });
+        }, 'DropOutPipeReadAsync'));
     }
 
     _readNextLine(stream) {
-        stream.read_line_async(GLib.PRIORITY_DEFAULT, null, (stream, res) => {
-            try {
+        stream.read_line_async(GLib.PRIORITY_DEFAULT, null, DropUtils.safeCallback((stream, res) => {
+            try { // eslint-disable-line no-empty
                 const [line] = stream.read_line_finish_utf8(res);
                 if (line !== null) {
                     this._appendMessage('agent', line);
@@ -790,22 +1031,22 @@ class HeraAccessDialog extends St.BoxLayout {
                     this._readNextLine(stream);
                 } else this._watchOutPipe();
             } catch (e) { this._watchOutPipe(); }
-        });
+        }, 'DropReadLineAsync'));
     }
 
     _handleAgentResponse(line) {
         const text = line.toLowerCase();
         if (text.includes('sigint handled')) {
-            this._setButtonState('INT', 'active');
-            this._appendMessage('agent', _('Signal %s handled').format('SIGINT'), null, true, false, false, true, [], true);
+            this._setButtonState('INT', 'active'); // eslint-disable-line max-len
+            this._appendMessage('agent', _('Signal %s handled').format('SIGINT'), null, true, false, false, true, [], true); // eslint-disable-line max-len
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => { this._setButtonState('INT', 'idle'); return GLib.SOURCE_REMOVE; });
         } else if (text.includes('sigstop handled')) {
-            this._setButtonState('STOP', 'active');
-            this._appendMessage('agent', _('Signal %s handled').format('SIGSTOP'), null, true, false, false, true, [], true);
+            this._setButtonState('STOP', 'active'); // eslint-disable-line max-len
+            this._appendMessage('agent', _('Signal %s handled').format('SIGSTOP'), null, true, false, false, true, [], true); // eslint-disable-line max-len
             this._setButtonState('CONT', 'idle');
         } else if (text.includes('sigcont handled')) {
-            this._setButtonState('CONT', 'active');
-            this._appendMessage('agent', _('Signal %s handled').format('SIGCONT'), null, true, false, false, true, [], true);
+            this._setButtonState('CONT', 'active'); // eslint-disable-line max-len
+            this._appendMessage('agent', _('Signal %s handled').format('SIGCONT'), null, true, false, false, true, [], true); // eslint-disable-line max-len
             this._setButtonState('STOP', 'idle');
         }
     }
@@ -816,11 +1057,7 @@ class HeraAccessDialog extends St.BoxLayout {
         const { button, label, icon, spinner } = data;
         button.remove_style_class_name('button-pending');
         button.remove_style_class_name('button-active');
-        button.set_style(null);
-        
-        const isInt = id === 'INT';
-        const borderRadius = isInt ? 'border-radius: 16px 0 0 16px;' : 'border-radius: 16px;';
-        const margin = isInt ? 'margin-right: 0;' : '';
+        button.remove_style_class_name('button-idle');
 
         if (label) label.show();
         if (icon) icon.show();
@@ -831,16 +1068,10 @@ class HeraAccessDialog extends St.BoxLayout {
             if (icon) icon.hide();
             spinner.show();
             button.add_style_class_name('button-pending');
-            button.set_style(`background-color: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); ${borderRadius} padding: 8px 12px; ${margin}`);
         } else if (state === 'active') {
             button.add_style_class_name('button-active');
-            button.set_style(`background-color: #3584e4; border: 1px solid #3584e4; ${borderRadius} padding: 8px 12px; color: white; ${margin}`);
-            if (label) label.set_style('color: white;');
-            if (icon) icon.set_style('color: white;');
-        } else if (state === 'idle') {
-            button.set_style(`background-color: rgba(255,255,255,0.05); border: 1px solid transparent; ${borderRadius} padding: 8px 12px; ${margin}`);
-            if (label) label.set_style('color: rgba(255,255,255,0.7);');
-            if (icon) icon.set_style('color: rgba(255,255,255,0.7);');
+        } else {
+            button.add_style_class_name('button-idle');
         }
     }
 
@@ -868,7 +1099,7 @@ class HeraAccessDialog extends St.BoxLayout {
         this._entry.text = ''; this._attachments = []; this._updateFileBin();
 
         try {
-            await HeraUtils.sendToAgent(this._inPipePath, text, attachments);
+            await DropUtils.sendToAgent(this._inPipePath, text, attachments);
         } catch (e) {
             this._appendMessage('system', _('Error sending to agent: %s').format(e.message));
         }

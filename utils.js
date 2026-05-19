@@ -21,7 +21,7 @@ import GLib from 'gi://GLib';
 /**
  * Pure logic utilities for Hera that can be tested independently of the GNOME Shell UI.
  */
-export const HeraUtils = {
+export const DropUtils = {
     _config: {
         tight: "\\/:;!?\"'`<>|*$&()[]{}@~# ",
         loose: "\\/:?\"<>|*",
@@ -172,7 +172,7 @@ export const HeraUtils = {
         if (!attachmentFiles || attachmentFiles.length === 0) {
             payload = new TextEncoder().encode(text + '\n');
         } else {
-            const boundary = `----HeraBoundary${Math.floor(Math.random() * 1000000)}`;
+            const boundary = `----DropBoundary${Math.floor(Math.random() * 1000000)}`;
             let attachmentData = [];
             for (const file of attachmentFiles) {
                 const [success, contents] = await new Promise((resolve, reject) => {
@@ -246,22 +246,22 @@ export const HeraUtils = {
                 Gio.DBusCallFlags.NONE,
                 -1,
                 null,
-                HeraUtils.safeCallback((conn, res) => {
+                DropUtils.safeCallback((conn, res) => {
                     try {
                         const result = conn.call_finish(res);
                         const [handlePath] = result.recursiveUnpack();
 
                         const signalId = connection.signal_subscribe(
-                            null, 'org.freedesktop.portal.Request', 'Response', handlePath, null, Gio.DBusSignalFlags.NONE,
-                            HeraUtils.safeCallback((c, sender, path, iface, signal, params) => {
+                            null, 'org.freedesktop.portal.Request', 'Response', handlePath, null, Gio.DBusSignalFlags.NONE, // eslint-disable-line max-len
+                            DropUtils.safeCallback((c, sender, path, iface, signal, params) => {
                                 const [response, results] = params.recursiveUnpack();
-                                connection.signal_unsubscribe(signalId); // Unsubscribe immediately
+                                connection.signal_unsubscribe(signalId);
                                 if (response === 0 && results.uris) resolve(results.uris);
                                 else reject(new Error(_('File selection cancelled or failed.')));
-                            }, 'HeraPortalResponse')
+                            }, 'DropPortalResponse')
                         );
                     } catch (e) { reject(e); }
-                }, 'HeraPortalCall')
+                }, 'DropPortalCall')
             );
         });
     },
@@ -270,7 +270,7 @@ export const HeraUtils = {
      * Wraps a callback to catch and log errors to the journal before re-throwing.
      * In GNOME Shell, 'logError' is the preferred way to log exceptions.
      */
-    safeCallback(callback, prefix = 'Hera') {
+    safeCallback(callback, prefix = 'Drop') {
         return (...args) => {
             try {
                 return callback(...args);

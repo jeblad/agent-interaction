@@ -27,15 +27,13 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import { HeraUtils } from './utils.js';
-import { HeraAccessDialog } from './dialog.js';
-
-const MAX_DISPLAY_MESSAGES = 50;
+import { DropUtils } from './utils.js';
+import { DropAccessDialog } from './dialog.js';
 /**
  * A standard item inside the submenu list.
  */
-const HeraMenuItem = GObject.registerClass(
-class HeraMenuItem extends PopupMenu.PopupMenuItem {
+const DropMenuItem = GObject.registerClass(
+class DropMenuItem extends PopupMenu.PopupMenuItem {
     _init(agentData, isConnected = false, onActivate, settings, gicon) {
         super._init('', {
             style_class: 'quick-settings-menu-item',
@@ -59,7 +57,7 @@ class HeraMenuItem extends PopupMenu.PopupMenuItem {
 
         // 1. Status icon
         const status = agentData.status || 'unknown';
-        const statusColor = HeraUtils.getStatusColor(this._settings, status);
+        const statusColor = DropUtils.getStatusColor(this._settings, status);
         this._statusIcon = new St.Icon({
             gicon: gicon,
             icon_size: 14,
@@ -98,20 +96,20 @@ class HeraMenuItem extends PopupMenu.PopupMenuItem {
         });
         this.add_child(this._statusLabel);
 
-        this.connect('activate', HeraUtils.safeCallback(() => onActivate(), 'HeraMenuItem'));
+        this.connect('activate', DropUtils.safeCallback(() => onActivate(), 'DropMenuItem'));
     }
 });
 /**
  * The Toggle Button in the Quick Settings grid.
  */
-const HeraMenuToggle = GObject.registerClass(
-class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
+const DropMenuToggle = GObject.registerClass(
+class DropMenuToggle extends QuickSettings.QuickMenuToggle {
     _init(extension, indicator) {
         this._indicator = indicator;
         this._settings = extension.getSettings();
         this._lastAgentsHash = '';
         
-        this._stateGIcon = Gio.FileIcon.new(extension.dir.get_child('icons').get_child('hera-state-symbolic.svg'));
+        this._stateGIcon = Gio.FileIcon.new(extension.dir.get_child('icons').get_child('drop-state-symbolic.svg'));
 
         super._init({
             title: _('Agent Interaction'),
@@ -127,11 +125,11 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
         this._agentSection = new PopupMenu.PopupMenuSection();
         this.menu.addMenuItem(this._agentSection);
 
-        this.connect('clicked', HeraUtils.safeCallback(() => this._indicator.toggleConnection(), 'HeraMenuToggle'));
+        this.connect('clicked', DropUtils.safeCallback(() => this._indicator.toggleConnection(), 'DropMenuToggle'));
 
-        this.menu.connect('open-state-changed', HeraUtils.safeCallback((menu, isOpen) => {
+        this.menu.connect('open-state-changed', DropUtils.safeCallback((menu, isOpen) => {
             if (isOpen) this._indicator._updateFromDisk();
-        }, 'HeraMenuOpen'));
+        }, 'DropMenuOpen'));
     }
 
     updateState(isConnected, activeAgent, agents = []) {
@@ -159,7 +157,7 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
 
         let statusStyle = '';
         if (isConnected) {
-            const hex = HeraUtils.getStatusColor(this._settings, status);
+            const hex = DropUtils.getStatusColor(this._settings, status);
             if (hex !== '#9a9996')
                 statusStyle = `color: ${hex} !important; background-color: transparent !important;`;
         }
@@ -194,7 +192,7 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
         if (agents.length > 0) {
             agents.forEach(agent => {
                 const isThisActive = activeAgent && agent.uuid === activeAgent.uuid;
-                this._agentSection.addMenuItem(new HeraMenuItem(
+                this._agentSection.addMenuItem(new DropMenuItem(
                     agent,
                     isConnected && isThisActive,
                     () => {
@@ -214,7 +212,7 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
         this._agentSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         const settingsItem = new PopupMenu.PopupMenuItem(_('Hera Settings...'));
-        settingsItem.connect('activate', HeraUtils.safeCallback(() => {
+        settingsItem.connect('activate', DropUtils.safeCallback(() => {
             if (Main.panel.statusArea.quickSettings.menu.isOpen)
                 Main.panel.statusArea.quickSettings.menu.close();
             this.menu.close();
@@ -222,15 +220,11 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
             // Using idle_add ensures the menu is fully closed and that
             // Shell has cleaned up the focus stack before we open the prefs window.
             // This allows the window to "rise to the top" as expected.
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                try {
-                    this._indicator._extension.openPreferences();
-                } catch (err) {
-                    console.error(`Hera: Failed to open preferences: ${err}`);
-                }
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, DropUtils.safeCallback(() => {
+                this._indicator._extension.openPreferences();
                 return GLib.SOURCE_REMOVE;
-            });
-        }, 'HeraSettingsItem'));
+            }, 'DropSettingsIdle'));
+        }, 'DropSettingsItem'));
         this._agentSection.addMenuItem(settingsItem);
     }
 });
@@ -238,14 +232,14 @@ class HeraMenuToggle extends QuickSettings.QuickMenuToggle {
 /**
  * The System Indicator that lives in the top panel.
  */
-const HeraIndicator = GObject.registerClass(
-class HeraIndicator extends QuickSettings.SystemIndicator {
+const DropIndicator = GObject.registerClass(
+class DropIndicator extends QuickSettings.SystemIndicator {
     _init(extension) {
         super._init();
         this._extension = extension;
         this._settings = extension.getSettings();
 
-        this._stateGIcon = Gio.FileIcon.new(extension.dir.get_child('icons').get_child('hera-state-symbolic.svg'));
+        this._stateGIcon = Gio.FileIcon.new(extension.dir.get_child('icons').get_child('drop-state-symbolic.svg'));
         this._wasConnected = false;
         this._lastActiveUuid = null;
 
@@ -264,7 +258,7 @@ class HeraIndicator extends QuickSettings.SystemIndicator {
         this._indicator.margin_top = 1;
         this._indicator.visible = false;
 
-        this._toggle = new HeraMenuToggle(extension, this);
+        this._toggle = new DropMenuToggle(extension, this);
         this.quickSettingsItems.push(this._toggle);
 
         Main.panel.statusArea.quickSettings.addExternalIndicator(this);
@@ -280,7 +274,7 @@ class HeraIndicator extends QuickSettings.SystemIndicator {
 
         try {
             const monitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null);
-            monitor.connect('changed', HeraUtils.safeCallback(() => this._updateFromDisk(), 'HeraDirMonitor'));
+            monitor.connect('changed', DropUtils.safeCallback(() => this._updateFromDisk(), 'DropDirMonitor'));
             this._monitors.set(path, monitor);
         } catch (e) {
             console.error(`Hera: Monitor error for ${path}: ${e.message}`);
@@ -291,8 +285,8 @@ class HeraIndicator extends QuickSettings.SystemIndicator {
         let win = this._accessWindows.get(agentData.uuid);
         try {
             if (!win) {
-                win = new HeraAccessDialog(agentData, this._settings);
-                win.connect('destroy', HeraUtils.safeCallback(() => this._accessWindows.delete(agentData.uuid), 'HeraDialogDestroy'));
+                win = new DropAccessDialog(agentData, this._settings);
+                win.connect('destroy', DropUtils.safeCallback(() => this._accessWindows.delete(agentData.uuid), 'DropDialogDestroy'));
                 this._accessWindows.set(agentData.uuid, win);
                 // Legger vinduet til i chrome-laget umiddelbart, men siden det er
                 // sammenfoldet (collapsed) i konstruktøren, vises det kun som en 1px stripe.
@@ -334,7 +328,7 @@ class HeraIndicator extends QuickSettings.SystemIndicator {
     connectToAgent(uuid) {
         this._activeAgentUuid = uuid;
         this._manualDisconnect = false;
-        GLib.idle_add(GLib.PRIORITY_DEFAULT, HeraUtils.safeCallback(() => {
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, DropUtils.safeCallback(() => {
             this._updateFromDisk();
             return GLib.SOURCE_REMOVE;
         }, 'HeraConnectToAgent'));
@@ -403,7 +397,7 @@ class HeraIndicator extends QuickSettings.SystemIndicator {
         this._indicator.gicon = this._stateGIcon;
 
         if (isConnected) {
-            const hex = HeraUtils.getStatusColor(this._settings, status);
+            const hex = DropUtils.getStatusColor(this._settings, status);
             this._indicator.set_style(hex !== '#9a9996' ? `color: ${hex};` : '');
         } else {
             this._indicator.set_style('');
@@ -441,10 +435,10 @@ class HeraIndicator extends QuickSettings.SystemIndicator {
     }
 });
 
-export default class QuickSettings50Extension extends Extension {
+export default class DropQuickSettingsExtension extends Extension {
     enable() {
         this.initTranslations();
-        this._indicator = new HeraIndicator(this);
+        this._indicator = new DropIndicator(this);
     }
 
     disable() {

@@ -25,8 +25,8 @@ msgid "Unknown Agent"
 msgstr "Ukjent agent"
 
 #: extension.js:101
-msgid "Hera Service"
-msgstr "Hera-tjeneste"
+msgid "Agent Interaction Service"
+msgstr "Agent Interaction-tjeneste"
 
 #: extension.js:101
 msgid "Available agents"
@@ -42,7 +42,7 @@ msgid "No agents found"
 msgstr "Ingen agenter funnet"
 
 #: extension.js:181
-msgid "Hera Settings..."
+msgid "Agent Interaction Settings..."
 msgstr "Innstillinger for agent-interaksjon …"
 
 #: prefs.js:44
@@ -251,8 +251,8 @@ msgstr "Filvalg avbrutt eller feilet."
 
 #: dialog.js:324
 #, javascript-format
-msgid "Hera: Portal error: %s"
-msgstr "Hera: Portal-feil: %s"
+msgid "Agent Interaction: Portal error: %s"
+msgstr "Agent Interaction: Portal-feil: %s"
 
 #: dialog.js:453
 msgid "You"

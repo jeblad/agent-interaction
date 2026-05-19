@@ -21,7 +21,7 @@ import GLib from 'gi://GLib';
 /**
  * Pure logic utilities for Hera that can be tested independently of the GNOME Shell UI.
  */
-export const DropUtils = {
+export const AgentUtils = {
     _config: {
         tight: "\\/:;!?\"'`<>|*$&()[]{}@~# ",
         loose: "\\/:?\"<>|*",
@@ -172,7 +172,7 @@ export const DropUtils = {
         if (!attachmentFiles || attachmentFiles.length === 0) {
             payload = new TextEncoder().encode(text + '\n');
         } else {
-            const boundary = `----DropBoundary${Math.floor(Math.random() * 1000000)}`;
+            const boundary = `----AgentBoundary${Math.floor(Math.random() * 1000000)}`;
             let attachmentData = [];
             for (const file of attachmentFiles) {
                 const [success, contents] = await new Promise((resolve, reject) => {
@@ -246,22 +246,22 @@ export const DropUtils = {
                 Gio.DBusCallFlags.NONE,
                 -1,
                 null,
-                DropUtils.safeCallback((conn, res) => {
+                AgentUtils.safeCallback((conn, res) => {
                     try {
                         const result = conn.call_finish(res);
                         const [handlePath] = result.recursiveUnpack();
 
                         const signalId = connection.signal_subscribe(
                             null, 'org.freedesktop.portal.Request', 'Response', handlePath, null, Gio.DBusSignalFlags.NONE, // eslint-disable-line max-len
-                            DropUtils.safeCallback((c, sender, path, iface, signal, params) => {
+                            AgentUtils.safeCallback((c, sender, path, iface, signal, params) => {
                                 const [response, results] = params.recursiveUnpack();
                                 connection.signal_unsubscribe(signalId);
                                 if (response === 0 && results.uris) resolve(results.uris);
                                 else reject(new Error(_('File selection cancelled or failed.')));
-                            }, 'DropPortalResponse')
+                            }, 'AgentPortalResponse')
                         );
                     } catch (e) { reject(e); }
-                }, 'DropPortalCall')
+                }, 'AgentPortalCall')
             );
         });
     },
@@ -270,7 +270,7 @@ export const DropUtils = {
      * Wraps a callback to catch and log errors to the journal before re-throwing.
      * In GNOME Shell, 'logError' is the preferred way to log exceptions.
      */
-    safeCallback(callback, prefix = 'Drop') {
+    safeCallback(callback, prefix = 'Agent') {
         return (...args) => {
             try {
                 return callback(...args);

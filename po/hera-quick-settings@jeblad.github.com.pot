@@ -1,12 +1,12 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the Hera Quick Settings package.
+# This file is distributed under the same license as the  Quick SettingsHera package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Hera Quick Settings\n"
+"Project-Id-Version: Agent Interaction\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-05-14 20:49+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: extension.js:92 extension.js:120 prefs.js:226
-msgid "Hera Access"
+msgid "Agent Interaction Access"
 msgstr ""
 
 #: extension.js:101
-msgid "Hera Service"
+msgid "Agent Interaction Service"
 msgstr ""
 
 #: extension.js:101
@@ -34,7 +34,7 @@ msgid "No agents found"
 msgstr ""
 
 #: extension.js:181
-msgid "Hera Settings..."
+msgid "Agent Interaction Settings..."
 msgstr ""
 
 #: prefs.js:44
@@ -146,12 +146,12 @@ msgid "Information"
 msgstr ""
 
 #: prefs.js:218
-msgid "About Hera Access"
+msgid "About Agent Interaction"
 msgstr ""
 
 #: prefs.js:219
 #, javascript-format
-msgid "Hera Access Version %s"
+msgid "Agent Interaction Access Version %s"
 msgstr ""
 
 #: dialog.js:70
@@ -213,7 +213,7 @@ msgstr ""
 
 #: dialog.js:324
 #, javascript-format
-msgid "Hera: Portal error: %s"
+msgid "Agent Interaction: Portal error: %s"
 msgstr ""
 
 #: dialog.js:453

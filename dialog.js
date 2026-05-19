@@ -1,5 +1,5 @@
 /*
- * Agent Interaction - A GNOME extension for communicating with Hera agents.
+ * Agent Interaction - A GNOME extension for communicating with AI agents.
  * Copyright (C) 2019-2024 John Erling Blad
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,8 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { DropUtils } from './utils.js';
-import { DropResizeHandler } from './resize.js';
+import { AgentUtils } from './utils.js';
+import { AgentResizeHandler } from './resize.js';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -29,9 +29,9 @@ import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.j
 /**
  * A floating, non-modal window built with St for communicating with an agent.
  */
-export const DropAccessDialog = GObject.registerClass(
-    { GTypeName: 'DropAccessDialog' },
-class DropAccessDialog extends St.Widget {
+export const AgentAccessDialog = GObject.registerClass(
+    { GTypeName: 'AgentAccessDialog' },
+class AgentAccessDialog extends St.Widget {
     _init(agentData, settings) {
         this._settings = settings;
         this._showTimeoutId = 0;
@@ -46,12 +46,12 @@ class DropAccessDialog extends St.Widget {
         this._agent = agentData;
         
         this._settingsHandlerId = this._settings.connect('changed', (s, key) => { // eslint-disable-line no-unused-vars
-            if (key === 'drop-force-reset') {
-                if (this._settings.get_boolean('drop-force-reset')) {
+            if (key === 'agent-force-reset') {
+                if (this._settings.get_boolean('agent-force-reset')) {
                     this._performHardReset();
-                    this._settings.set_boolean('drop-force-reset', false); // Reset the trigger
+                    this._settings.set_boolean('agent-force-reset', false); // Reset the trigger
                 }
-            } else if (key.startsWith('drop-')) {
+            } else if (key.startsWith('agent-')) {
                 // Samle opp flere endringer (som ved reset) og kjør refresh én gang
                 if (this._refreshId) GLib.source_remove(this._refreshId);
                 this._refreshId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
@@ -62,15 +62,15 @@ class DropAccessDialog extends St.Widget {
             }
         });
 
-        this._edgeOffset = this._settings.get_int('drop-window-edge-offset');
-        this._minWidth = this._settings.get_int('drop-window-min-width');
-        this._minHeight = this._settings.get_int('drop-window-min-height');
+        this._edgeOffset = this._settings.get_int('agent-window-edge-offset');
+        this._minWidth = this._settings.get_int('agent-window-min-width');
+        this._minHeight = this._settings.get_int('agent-window-min-height');
         const geo = this._calculateGeometry(false);
         this._expandedX = geo.x;
 
         // Initialize the Widget
         super._init({
-            style_class: 'drop-outer-container',
+            style_class: 'agent-outer-container',
             can_focus: true,
             reactive: true,
             track_hover: true,
@@ -85,7 +85,7 @@ class DropAccessDialog extends St.Widget {
         this._side = (geo.x + geo.width / 2 > monitor.x + monitor.width / 2) ? 1 : 0;
         this._expandedX = geo.x;
 
-        this._maxDisplayMessages = this._settings.get_int('drop-window-max-display-messages');
+        this._maxDisplayMessages = this._settings.get_int('agent-window-max-display-messages');
         this._setupResizers(settings, this._edgeOffset);
         this._setupWindowLayout(geo);
 
@@ -136,7 +136,7 @@ class DropAccessDialog extends St.Widget {
         };
 
         // 1. Inner Side Resizer
-        this._resizers.push(new DropResizeHandler(this, settings, {
+        this._resizers.push(new AgentResizeHandler(this, settings, {
             ...common,
             minWidth: this._minWidth, minHeight: this._minHeight,
             edge: (this._side === 1) ? 'left' : 'right',
@@ -145,7 +145,7 @@ class DropAccessDialog extends St.Widget {
         }));
 
         // 2. Top Resizer
-        this._resizers.push(new DropResizeHandler(this, settings, {
+        this._resizers.push(new AgentResizeHandler(this, settings, {
             ...common,
             minWidth: this._minWidth, minHeight: this._minHeight,
             edge: 'top',
@@ -154,7 +154,7 @@ class DropAccessDialog extends St.Widget {
         }));
 
         // 3. Bottom Resizer
-        this._resizers.push(new DropResizeHandler(this, settings, {
+        this._resizers.push(new AgentResizeHandler(this, settings, {
             ...common,
             minWidth: this._minWidth, minHeight: this._minHeight,
             edge: 'bottom',
@@ -163,7 +163,7 @@ class DropAccessDialog extends St.Widget {
         }));
 
         // 4. Outer Side Resizer
-        this._resizers.push(new DropResizeHandler(this, settings, {
+        this._resizers.push(new AgentResizeHandler(this, settings, {
             ...common,
             minWidth: this._minWidth, minHeight: this._minHeight,
             edge: (this._side === 1) ? 'right' : 'left',
@@ -179,10 +179,10 @@ class DropAccessDialog extends St.Widget {
      */
     _calculateGeometry(useDefaults = false) {
         if (!useDefaults) {
-            const x = this._settings.get_int('drop-window-x');
-            const y = this._settings.get_int('drop-window-y');
-            const width = this._settings.get_int('drop-window-width');
-            const height = this._settings.get_int('drop-window-height');
+            const x = this._settings.get_int('agent-window-x');
+            const y = this._settings.get_int('agent-window-y');
+            const width = this._settings.get_int('agent-window-width');
+            const height = this._settings.get_int('agent-window-height');
             
             if (x !== -1 && y !== -1 && width !== -1 && height !== -1)
                 return { x, y, width, height };
@@ -192,12 +192,12 @@ class DropAccessDialog extends St.Widget {
         const monitor = Main.layoutManager.primaryMonitor;
         const panelHeight = Main.panel.height;
 
-        const topMargin = this._settings.get_int('drop-window-top-margin');
-        const bottomMargin = this._settings.get_int('drop-window-bottom-margin');
+        const topMargin = this._settings.get_int('agent-window-top-margin');
+        const bottomMargin = this._settings.get_int('agent-window-bottom-margin');
 
         // Get configurable default width parameters
-        const defaultWidthScale = this._settings.get_double('drop-window-default-scale-width');
-        const maxDefaultWidth = this._settings.get_int('drop-window-default-max-width');
+        const defaultWidthScale = this._settings.get_double('agent-window-default-scale-width');
+        const maxDefaultWidth = this._settings.get_int('agent-window-default-max-width');
         const width = Math.min(monitor.width * defaultWidthScale, maxDefaultWidth) + (2 * this._edgeOffset);
         
         let y = monitor.y + panelHeight - this._edgeOffset;
@@ -316,7 +316,7 @@ class DropAccessDialog extends St.Widget {
 
     _setupWindowLayout(geo) {
         this._mainContent = new St.BoxLayout({
-            style_class: 'drop-window',
+            style_class: 'agent-window',
             vertical: true,
             x: this._edgeOffset,
             y: this._edgeOffset,
@@ -373,10 +373,10 @@ class DropAccessDialog extends St.Widget {
             track_hover: true,
         });
 
-        titleLabel.connect('button-press-event', DropUtils.safeCallback(() => {
+        titleLabel.connect('button-press-event', AgentUtils.safeCallback(() => {
             this._showAgentReport();
             return Clutter.EVENT_STOP;
-        }, 'HeraHeaderClick'));
+        }, 'AgentHeaderClick'));
 
         header.add_child(titleLabel);
         return header;
@@ -388,15 +388,15 @@ class DropAccessDialog extends St.Widget {
             vscrollbar_policy: St.PolicyType.AUTOMATIC,
             y_expand: true,
             x_expand: true,
-            style_class: 'drop-chat-scroll',
+            style_class: 'agent-chat-scroll',
         });
         
         this._vAdj = this._scroll.get_vadjustment(); // eslint-disable-line no-unused-vars
-        this._vAdj.connect('notify::value', DropUtils.safeCallback(() => {
+        this._vAdj.connect('notify::value', AgentUtils.safeCallback(() => {
             if (this._vAdj.value <= this._vAdj.lower && !this._loadingMore && this._surfaceOffset > 0) {
                 this._loadMoreSurfaceHistory();
             }
-        }, 'DropScroll'));
+        }, 'AgentScroll'));
 
         this._logBin = new St.BoxLayout({
             vertical: true,
@@ -413,12 +413,12 @@ class DropAccessDialog extends St.Widget {
             vertical: false,
             x_expand: true,
             y_expand: false,
-            style_class: 'drop-file-bin'
+            style_class: 'agent-file-bin'
         });
         
         this._chipsBox = new St.BoxLayout({
             vertical: false,
-            style_class: 'drop-file-chips-box',
+            style_class: 'agent-file-chips-box',
             x_expand: true,
         });
         this._fileBin.add_child(this._chipsBox);
@@ -428,9 +428,9 @@ class DropAccessDialog extends St.Widget {
                 icon_name: 'mail-attachment-symbolic',
                 icon_size: 14,
             }),
-            style_class: 'button',
+            style_class: 'agent-button',
         });
-        attachBtn.connect('clicked', DropUtils.safeCallback(() => this._onAttachClicked(), 'DropAttachClick'));
+        attachBtn.connect('clicked', AgentUtils.safeCallback(() => this._onAttachClicked(), 'AgentAttachClick'));
         this._fileBin.add_child(attachBtn);
 
         return this._fileBin;
@@ -442,7 +442,7 @@ class DropAccessDialog extends St.Widget {
             can_focus: true,
             reactive: true,
             x_expand: true,
-            style_class: 'drop-input-entry'
+            style_class: 'agent-input-entry'
         });
 
         const clutterText = this._entry.clutter_text;
@@ -452,12 +452,12 @@ class DropAccessDialog extends St.Widget {
         clutterText.editable = true;
         clutterText.reactive = true;
 
-        this._entry.connect('button-press-event', DropUtils.safeCallback(() => {
+        this._entry.connect('button-press-event', AgentUtils.safeCallback(() => {
             clutterText.grab_key_focus();
             return Clutter.EVENT_PROPAGATE;
-        }, 'DropEntryClick'));
+        }, 'AgentEntryClick'));
         
-        clutterText.connect('key-press-event', DropUtils.safeCallback((actor, event) => {
+        clutterText.connect('key-press-event', AgentUtils.safeCallback((actor, event) => {
             const symbol = event.get_key_symbol();
             const modifiers = event.get_state();
             const hasShift = (modifiers & Clutter.ModifierType.SHIFT_MASK) !== 0;
@@ -471,14 +471,14 @@ class DropAccessDialog extends St.Widget {
                 }
             }
             return Clutter.EVENT_PROPAGATE;
-        }, 'DropKeyPress'));
+        }, 'AgentKeyPress'));
         return this._entry;
     }
 
     _createActionRow() {
         const actionRow = new St.BoxLayout({
             vertical: false,
-            style_class: 'drop-action-row',
+            style_class: 'agent-action-row',
             x_expand: true
         });
 
@@ -493,7 +493,7 @@ class DropAccessDialog extends St.Widget {
                 icon = new St.Icon({ icon_name: labelOrIcon, icon_size: 14 });
                 content.add_child(icon);
             } else {
-                label = new St.Label({ text: labelOrIcon, style_class: 'drop-signal-label' });
+                label = new St.Label({ text: labelOrIcon, style_class: 'agent-signal-label' });
                 content.add_child(label);
             }
 
@@ -506,11 +506,11 @@ class DropAccessDialog extends St.Widget {
 
             const btn = new St.Button({
                 child: content,
-                style_class: `button drop-signal-button ${isLeftGroup ? 'drop-signal-button-left' : ''}`,
+                style_class: `agent-button agent-signal-button ${isLeftGroup ? 'agent-signal-button-left' : ''}`,
                 can_focus: true,
             });
 
-            btn.connect('clicked', DropUtils.safeCallback(() => this._sendSignal(signal), `DropSignalBtn_${id}`));
+            btn.connect('clicked', AgentUtils.safeCallback(() => this._sendSignal(signal), `AgentSignalBtn_${id}`));
             
             this._signalButtons[id] = {
                 button: btn,
@@ -524,14 +524,14 @@ class DropAccessDialog extends St.Widget {
         };
 
         // Create a grouped signal button (Main action + Dropdown)
-        const sigGroup = new St.BoxLayout({ style_class: 'drop-signal-group' });
+        const sigGroup = new St.BoxLayout({ style_class: 'agent-signal-group' });
         actionRow.add_child(sigGroup);
 
         const intBtn = createSignalBtn('INT', _('Interrupt'), 'INT', true);
         sigGroup.add_child(intBtn);
 
         const menuBtn = new St.Button({
-            style_class: 'button drop-signal-dropdown-button',
+            style_class: 'agent-button agent-signal-dropdown-button',
             child: new St.Icon({ 
                 icon_name: 'pan-down-symbolic', 
                 icon_size: 12, 
@@ -550,15 +550,15 @@ class DropAccessDialog extends St.Widget {
         this._sigMenu.actor.hide();
 
         [
-            { label: _('Interrupt (SIGINT)'), sig: 'INT' },
+            { label: _('Interrupt (SIGINT)'), sig: 'INT' }, // This line is not changed, but it's in the context
             { label: _('Terminate (SIGTERM)'), sig: 'TERM' },
             { label: _('Kill (SIGKILL)'), sig: 'KILL' },
-        ].forEach(DropUtils.safeCallback(item => {
+        ].forEach(AgentUtils.safeCallback(item => {
             const mi = new PopupMenu.PopupMenuItem(item.label);
             mi.connect('activate', () => this._sendSignal(item.sig));
             this._sigMenu.addMenuItem(mi);
-        }, 'DropSignalMenuItem'));
-        menuBtn.connect('clicked', DropUtils.safeCallback(() => this._sigMenu.toggle(), 'DropSignalMenuToggle'));
+        }, 'AgentSignalMenuItem'));
+        menuBtn.connect('clicked', AgentUtils.safeCallback(() => this._sigMenu.toggle(), 'AgentSignalMenuToggle'));
 
         actionRow.add_child(createSignalBtn('STOP', 'media-playback-pause-symbolic', 'STOP'));
         actionRow.add_child(createSignalBtn('CONT', 'media-playback-start-symbolic', 'CONT'));
@@ -568,10 +568,10 @@ class DropAccessDialog extends St.Widget {
 
         const aboutBtn = new St.Button({
             label: _('Agent Info'),
-            style_class: 'drop-about-button',
+            style_class: 'agent-about-button',
             y_align: Clutter.ActorAlign.CENTER
         });
-        aboutBtn.connect('clicked', DropUtils.safeCallback(() => this._showAgentReport(), 'DropAboutBtn'));
+        aboutBtn.connect('clicked', AgentUtils.safeCallback(() => this._showAgentReport(), 'AgentAboutBtn'));
         actionRow.add_child(aboutBtn);
         return actionRow;
     }
@@ -589,9 +589,9 @@ class DropAccessDialog extends St.Widget {
 
     _setupHoverLogic() {
         this._isCollapsed = true;
-        this.connect('notify::hover', DropUtils.safeCallback(() => {
+        this.connect('notify::hover', AgentUtils.safeCallback(() => {
             this._syncHoverState();
-        }, 'DropHoverNotify'));
+        }, 'AgentHoverNotify'));
     }
 
     _syncHoverState() {
@@ -614,11 +614,11 @@ class DropAccessDialog extends St.Widget {
         // Use an async IIFE to handle the promise from selectFilesFromPortal
         (async () => {
             try { // eslint-disable-line no-empty
-                const uris = await DropUtils.selectFilesFromPortal(title, true);
+                const uris = await AgentUtils.selectFilesFromPortal(title, true);
                 for (const uri of uris) {
                     if (this._attachments.some(entry => entry.file.get_uri() === uri)) continue; // This is fine
                     const file = Gio.File.new_for_uri(uri);
-                    if (await DropUtils.isPlainText(file)) {
+                    if (await AgentUtils.isPlainText(file)) {
                         this._attachments.push({ file, selected: true }); // eslint-disable-line max-len
                     } else {
                         this._appendMessage('system', _('File “%s” is not plain text and was ignored.').format(file.get_basename()), null, false);
@@ -630,7 +630,7 @@ class DropAccessDialog extends St.Widget {
                 // The error is already logged by safeCallback in HeraUtils, or it's a user cancellation.
                 // No need to show an error message to the user for cancellation.
                 if (e.message !== _('File selection cancelled or failed.')) {
-                    this._appendMessage('system', _('Hera: Portal error: %s').format(e.message), null, false);
+                    this._appendMessage('system', _('AgentInteraction: Portal error: %s').format(e.message), null, false);
                 }
             }
         })();
@@ -641,7 +641,7 @@ class DropAccessDialog extends St.Widget {
         
         this._attachments.forEach(entry => {
             const chip = new St.BoxLayout({
-                style_class: 'drop-file-chip',
+                style_class: 'agent-file-chip',
                 x_align: Clutter.ActorAlign.START,
                 reactive: true,
                 track_hover: true,
@@ -650,7 +650,7 @@ class DropAccessDialog extends St.Widget {
             const statusIcon = new St.Icon({
                 icon_name: entry.selected ? 'object-select-symbolic' : 'dialog-close-symbolic',
                 icon_size: 12,
-                style_class: entry.selected ? 'drop-file-chip-icon-selected' : 'drop-file-chip-icon-deselected',
+                style_class: entry.selected ? 'agent-file-chip-icon-selected' : 'agent-file-chip-icon-deselected',
                 style: 'margin-right: 6px;'
             });
 
@@ -661,11 +661,11 @@ class DropAccessDialog extends St.Widget {
 
             chip.add_child(statusIcon);
             chip.add_child(label);
-            chip.connect('button-press-event', DropUtils.safeCallback(() => {
+            chip.connect('button-press-event', AgentUtils.safeCallback(() => {
                 entry.selected = !entry.selected;
                 this._updateFileBin();
                 return Clutter.EVENT_STOP;
-            }, 'DropFileChipClick'));
+            }, 'AgentFileChipClick'));
             this._chipsBox.add_child(chip);
         });
     }
@@ -681,7 +681,7 @@ class DropAccessDialog extends St.Widget {
             this._hideTimeoutId = 0;
         }
         
-        this._hideTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, DropUtils.safeCallback(() => {
+        this._hideTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, AgentUtils.safeCallback(() => {
             this._hideTimeoutId = 0;
             const stillOccluded = this._checkOcclusion();
             if (this._resizers.some(r => r.isDragging) || !stillOccluded || this.hover) 
@@ -702,17 +702,17 @@ class DropAccessDialog extends St.Widget {
                 translation_x: targetTranslation,
                 duration: 500,
                 mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
-                onComplete: DropUtils.safeCallback(() => {
+                onComplete: AgentUtils.safeCallback(() => {
                     this._isCollapsed = true;
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, DropUtils.safeCallback(() => {
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, AgentUtils.safeCallback(() => {
                         this._animating = false;
                         this._syncHoverState();
                         return GLib.SOURCE_REMOVE;
-                    }, 'DropHideCooldown'));
-                }, 'DropHideComplete')
+                    }, 'AgentHideCooldown'));
+                }, 'AgentHideComplete')
             });
             return GLib.SOURCE_REMOVE;
-        }, 'DropHideTimeout'));
+        }, 'AgentHideTimeout'));
     }
 
     _onMouseEnter() {
@@ -723,7 +723,7 @@ class DropAccessDialog extends St.Widget {
             this._hideTimeoutId = 0;
         }
         if (this._showTimeoutId) return; // eslint-disable-line no-empty
-        this._showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, DropUtils.safeCallback(() => {
+        this._showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, AgentUtils.safeCallback(() => {
             this._showTimeoutId = 0;
             this._animating = true;
             this.ease({
@@ -731,18 +731,18 @@ class DropAccessDialog extends St.Widget {
                 translation_x: 0,
                 duration: 500,
                 mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
-                onComplete: DropUtils.safeCallback(() => {
+                onComplete: AgentUtils.safeCallback(() => {
                     this._isCollapsed = false;
                     this._entry.clutter_text.grab_key_focus();
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, DropUtils.safeCallback(() => {
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, AgentUtils.safeCallback(() => {
                         this._animating = false;
                         this._syncHoverState();
                         return GLib.SOURCE_REMOVE;
-                    }, 'DropShowCooldown'));
-                }, 'DropShowComplete')
+                    }, 'AgentShowCooldown'));
+                }, 'AgentShowComplete')
             });
             return GLib.SOURCE_REMOVE;
-        }, 'DropShowTimeout'));
+        }, 'AgentShowTimeout'));
     }
 
     /**
@@ -761,13 +761,13 @@ class DropAccessDialog extends St.Widget {
         const isSystem = sender === 'system';
         const isMetaMsg = isMeta || isSystem;
 
-        const styleClasses = ['drop-message-bubble'];
-        if (isUser) styleClasses.push('drop-message-user');
-        else if (isSystem) styleClasses.push('drop-message-system');
-        else styleClasses.push('drop-message-agent');
+        const styleClasses = ['agent-message-bubble'];
+        if (isUser) styleClasses.push('agent-message-user');
+        else if (isSystem) styleClasses.push('agent-message-system');
+        else styleClasses.push('agent-message-agent');
         
-        if (isMetaMsg) styleClasses.push('drop-message-meta');
-        if (indent) styleClasses.push('drop-message-indented');
+        if (isMetaMsg) styleClasses.push('agent-message-meta');
+        if (indent) styleClasses.push('agent-message-indented');
 
         const msgBox = new St.BoxLayout({
             vertical: true,
@@ -778,7 +778,7 @@ class DropAccessDialog extends St.Widget {
         const senderName = isUser ? _('You') : this._getAgentDisplayName();
         const meta = new St.Label({
             text: _('%s • %s').format(senderName, displayTime),
-            style_class: 'drop-message-meta-label'
+            style_class: 'agent-message-meta-label'
         });
         msgBox.add_child(meta);
 
@@ -786,10 +786,10 @@ class DropAccessDialog extends St.Widget {
             msgBox.add_child(this._createReportGrid(text));
         } else if (text && text.length > 0) {
             // Escape agent output to prevent Pango markup injection
-            const displayedText = (sender === 'agent' || sender === 'system') ? DropUtils.escapePango(text) : text;
+            const displayedText = (sender === 'agent' || sender === 'system') ? AgentUtils.escapePango(text) : text;
             const content = new St.Label({
                 text: displayedText,
-                style_class: 'drop-message-content',
+                style_class: 'agent-message-content',
                 x_expand: true,
             });
             content.clutter_text.line_wrap = true;
@@ -799,9 +799,9 @@ class DropAccessDialog extends St.Widget {
         }
 
         if (attachments.length > 0) {
-            const attachmentsRow = new St.BoxLayout({ vertical: false, style_class: 'drop-message-attachments', x_expand: true });
+            const attachmentsRow = new St.BoxLayout({ vertical: false, style_class: 'agent-message-attachments', x_expand: true });
             attachments.forEach(file => {
-                const chip = new St.BoxLayout({ vertical: false, style_class: 'drop-message-attachment-chip' });
+                const chip = new St.BoxLayout({ vertical: false, style_class: 'agent-message-attachment-chip' });
                 // Ensure basename is available, or use a placeholder
                 const fileName = file.get_basename ? file.get_basename() : String(file);
                 chip.add_child(new St.Label({ text: fileName, style: 'font-size: 0.8em; color: #ddd;' }));
@@ -813,14 +813,14 @@ class DropAccessDialog extends St.Widget {
     }
 
     _createReportGrid(data) {
-        const grid = new St.BoxLayout({ vertical: true, style_class: 'drop-report-grid' });
+        const grid = new St.BoxLayout({ vertical: true, style_class: 'agent-report-grid' });
         for (const [key, value] of Object.entries(data)) {
-            const row = new St.BoxLayout({ vertical: false, style_class: 'drop-report-row' });
+            const row = new St.BoxLayout({ vertical: false, style_class: 'agent-report-row' });
             const keyLabel = new St.Label({ 
                 text: `${key}:`, 
-                style_class: 'drop-report-key'
+                style_class: 'agent-report-key'
             });
-            const valLabel = new St.Label({ text: String(value), style_class: 'drop-report-val' });
+            const valLabel = new St.Label({ text: String(value), style_class: 'agent-report-val' });
             row.add_child(keyLabel);
             row.add_child(valLabel);
             grid.add_child(row);
@@ -868,13 +868,13 @@ class DropAccessDialog extends St.Widget {
     _renderLogLines(lines, prepend) {
         if (prepend) {
             for (let i = lines.length - 1; i >= 0; i--) {
-                const msg = DropUtils.parseLogLine(lines[i]);
+                const msg = AgentUtils.parseLogLine(lines[i]);
                 if (msg) // eslint-disable-line no-empty
                     this._appendMessage(msg.sender, msg.text, msg.timestamp, false, true, true, msg.isMeta, msg.attachments);
             }
         } else {
             lines.forEach(line => {
-                const msg = DropUtils.parseLogLine(line);
+                const msg = AgentUtils.parseLogLine(line);
                 if (msg)
                     this._appendMessage(msg.sender, msg.text, msg.timestamp, false, false, true, msg.isMeta, msg.attachments);
             });
@@ -937,7 +937,7 @@ class DropAccessDialog extends St.Widget {
                         return;
                     }
 
-                    const res = DropUtils.getLinesToDisplay(allLines, this._surfaceOffset, Math.floor(this._maxDisplayMessages / 2)); // eslint-disable-line max-len
+                const res = AgentUtils.getLinesToDisplay(allLines, this._surfaceOffset, Math.floor(this._maxDisplayMessages / 2)); // eslint-disable-line max-len
                     if (res.lines.length > 0) {
                         this._renderLogLines(res.lines, true);
                         this._surfaceOffset = res.newOffset;
@@ -999,10 +999,10 @@ class DropAccessDialog extends St.Widget {
         const status = agentData.status;
         const sActive = this._settings.get_string('status-active');
         const sInactive = this._settings.get_string('status-inactive');
-        if (DropUtils.isStatusMatch(sInactive, status)) {
+        if (AgentUtils.isStatusMatch(sInactive, status)) {
             this._setButtonState('STOP', 'active');
             this._setButtonState('CONT', 'idle');
-        } else if (DropUtils.isStatusMatch(sActive, status)) {
+        } else if (AgentUtils.isStatusMatch(sActive, status)) {
             this._setButtonState('CONT', 'active');
             this._setButtonState('STOP', 'idle');
         }
@@ -1010,19 +1010,19 @@ class DropAccessDialog extends St.Widget {
 
     _watchOutPipe() {
         const file = Gio.File.new_for_path(this._outPipePath);
-        file.read_async(GLib.PRIORITY_DEFAULT, null, DropUtils.safeCallback((file, res) => {
+        file.read_async(GLib.PRIORITY_DEFAULT, null, AgentUtils.safeCallback((file, res) => {
             try {
                 const stream = file.read_finish(res); // eslint-disable-line no-empty
                 const dataStream = new Gio.DataInputStream({ base_stream: stream, close_base_stream: true });
                 this._readNextLine(dataStream);
             } catch (e) {
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, DropUtils.safeCallback(() => { this._watchOutPipe(); return GLib.SOURCE_REMOVE; }, 'DropWatchRetry'));
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, AgentUtils.safeCallback(() => { this._watchOutPipe(); return GLib.SOURCE_REMOVE; }, 'AgentWatchRetry'));
             }
-        }, 'DropOutPipeReadAsync'));
+        }, 'AgentOutPipeReadAsync'));
     }
 
     _readNextLine(stream) {
-        stream.read_line_async(GLib.PRIORITY_DEFAULT, null, DropUtils.safeCallback((stream, res) => {
+        stream.read_line_async(GLib.PRIORITY_DEFAULT, null, AgentUtils.safeCallback((stream, res) => {
             try { // eslint-disable-line no-empty
                 const [line] = stream.read_line_finish_utf8(res);
                 if (line !== null) {
@@ -1031,7 +1031,7 @@ class DropAccessDialog extends St.Widget {
                     this._readNextLine(stream);
                 } else this._watchOutPipe();
             } catch (e) { this._watchOutPipe(); }
-        }, 'DropReadLineAsync'));
+        }, 'AgentReadLineAsync'));
     }
 
     _handleAgentResponse(line) {
@@ -1099,7 +1099,7 @@ class DropAccessDialog extends St.Widget {
         this._entry.text = ''; this._attachments = []; this._updateFileBin();
 
         try {
-            await DropUtils.sendToAgent(this._inPipePath, text, attachments);
+            await AgentUtils.sendToAgent(this._inPipePath, text, attachments);
         } catch (e) {
             this._appendMessage('system', _('Error sending to agent: %s').format(e.message));
         }

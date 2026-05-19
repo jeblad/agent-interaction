@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { DropUtils } from '../utils.js';
+import { AgentUtils } from '../utils.js';
 import system from 'system';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -30,21 +30,21 @@ function assert(condition, message) {
 }
 
 async function runTests() {
-print("Starting Hera logic tests...");
+print("Starting Agent Interaction logic tests...");
 let allPassed = true;
 
 // 1. Test isStatusMatch
-allPassed &= assert(DropUtils.isStatusMatch("active,running", "active") === true, "Match single status");
-allPassed &= assert(DropUtils.isStatusMatch("active,running", "RUNNING") === true, "Case insensitive match");
-allPassed &= assert(DropUtils.isStatusMatch("active,running", "failed") === false, "Handle no match");
+allPassed &= assert(AgentUtils.isStatusMatch("active,running", "active") === true, "Match single status");
+allPassed &= assert(AgentUtils.isStatusMatch("active,running", "RUNNING") === true, "Case insensitive match");
+allPassed &= assert(AgentUtils.isStatusMatch("active,running", "failed") === false, "Handle no match");
 
 // 2. Test getLinesToDisplay
 const mockLines = ["L1", "L2", "L3", "L4", "L5"];
-const result = DropUtils.getLinesToDisplay(mockLines, 0, 2);
+const result = AgentUtils.getLinesToDisplay(mockLines, 0, 2);
 allPassed &= assert(result.lines.length === 2 && result.lines[1] === "L5", "Slice recent lines correctly");
 allPassed &= assert(result.newOffset === 2, "Update offset correctly");
 
-const result2 = DropUtils.getLinesToDisplay(mockLines, 2, 2);
+const result2 = AgentUtils.getLinesToDisplay(mockLines, 2, 2);
 allPassed &= assert(result2.lines.length === 2 && result2.lines[1] === "L3", "Slice historical lines correctly");
 
 // 3. Test buildMultipartPayload
@@ -54,7 +54,7 @@ const attachments = [
     { name: "test.txt", contents: new Uint8Array([72, 101, 108, 108, 111]) } // "Hello"
 ];
 
-const payload = DropUtils.buildMultipartPayload(text, attachments, boundary);
+const payload = AgentUtils.buildMultipartPayload(text, attachments, boundary);
 const decoder = new TextDecoder();
 const decodedString = decoder.decode(payload);
 
@@ -71,7 +71,7 @@ const originalLogError = globalThis.logError;
 globalThis.logError = () => { errorLogged = true; };
 
 try {
-    const buggy = DropUtils.safeCallback(() => { throw new Error("Boom"); }, "TestLabel");
+    const buggy = AgentUtils.safeCallback(() => { throw new Error("Boom"); }, "TestLabel");
     buggy();
 } catch (e) {
     allPassed &= assert(e.message === "Boom", "safeCallback re-throws correctly");
@@ -80,35 +80,35 @@ try {
 globalThis.logError = originalLogError;
 
 // 5. Test escapePango
-allPassed &= assert(DropUtils.escapePango("Hello & World") === "Hello &amp; World", "escapePango: escapes ampersand");
-allPassed &= assert(DropUtils.escapePango("1 < 2 > 0") === "1 &lt; 2 &gt; 0", "escapePango: escapes angle brackets");
-allPassed &= assert(DropUtils.escapePango("No special chars") === "No special chars", "escapePango: no change for safe string");
-allPassed &= assert(DropUtils.escapePango(null) === "", "escapePango: handles null input");
-allPassed &= assert(DropUtils.escapePango("") === "", "escapePango: handles empty string");
+allPassed &= assert(AgentUtils.escapePango("Hello & World") === "Hello &amp; World", "escapePango: escapes ampersand");
+allPassed &= assert(AgentUtils.escapePango("1 < 2 > 0") === "1 &lt; 2 &gt; 0", "escapePango: escapes angle brackets");
+allPassed &= assert(AgentUtils.escapePango("No special chars") === "No special chars", "escapePango: no change for safe string");
+allPassed &= assert(AgentUtils.escapePango(null) === "", "escapePango: handles null input");
+allPassed &= assert(AgentUtils.escapePango("") === "", "escapePango: handles empty string");
 
 // 5. Test sanitize (Port of C++ rewrite logic)
-allPassed &= assert(DropUtils.sanitize("file/name.txt", true, '_') === "file_name.txt", "Sanitize tight: replaces slash");
-allPassed &= assert(DropUtils.sanitize("file:name.txt", false, '_') === "file_name.txt", "Sanitize loose: replaces colon");
-allPassed &= assert(DropUtils.sanitize("normal_file.txt", true, '_') === "normal_file.txt", "Sanitize: keeps normal chars");
-allPassed &= assert(DropUtils.sanitize("control\x00char", true, '_') === "control_char", "Sanitize: replaces null byte");
-allPassed &= assert(DropUtils.sanitize("control\x1fchar", true, '_') === "control_char", "Sanitize: replaces unit separator");
-allPassed &= assert(DropUtils.sanitize("control\x7fchar", true, '_') === "control_char", "Sanitize: replaces DEL");
-allPassed &= assert(DropUtils.sanitize(".", true, '_') === "_", "Sanitize: replaces single dot");
-allPassed &= assert(DropUtils.sanitize("..", true, '_') === "_", "Sanitize: replaces double dot");
-allPassed &= assert(DropUtils.sanitize("My File Name", true, '_') === "My_File_Name", "Sanitize tight: replaces space");
-allPassed &= assert(DropUtils.sanitize("My File Name", false, '_') === "My File Name", "Sanitize loose: keeps space");
+allPassed &= assert(AgentUtils.sanitize("file/name.txt", true, '_') === "file_name.txt", "Sanitize tight: replaces slash");
+allPassed &= assert(AgentUtils.sanitize("file:name.txt", false, '_') === "file_name.txt", "Sanitize loose: replaces colon");
+allPassed &= assert(AgentUtils.sanitize("normal_file.txt", true, '_') === "normal_file.txt", "Sanitize: keeps normal chars");
+allPassed &= assert(AgentUtils.sanitize("control\x00char", true, '_') === "control_char", "Sanitize: replaces null byte");
+allPassed &= assert(AgentUtils.sanitize("control\x1fchar", true, '_') === "control_char", "Sanitize: replaces unit separator");
+allPassed &= assert(AgentUtils.sanitize("control\x7fchar", true, '_') === "control_char", "Sanitize: replaces DEL");
+allPassed &= assert(AgentUtils.sanitize(".", true, '_') === "_", "Sanitize: replaces single dot");
+allPassed &= assert(AgentUtils.sanitize("..", true, '_') === "_", "Sanitize: replaces double dot");
+allPassed &= assert(AgentUtils.sanitize("My File Name", true, '_') === "My_File_Name", "Sanitize tight: replaces space");
+allPassed &= assert(AgentUtils.sanitize("My File Name", false, '_') === "My File Name", "Sanitize loose: keeps space");
 
 // 6. Test validate (Port of C++ validate logic)
-allPassed &= assert(DropUtils.validate("valid_filename.txt", true) === true, "Validate tight: valid filename");
-allPassed &= assert(DropUtils.validate("valid filename.txt", true) === false, "Validate tight: invalid filename (space)");
-allPassed &= assert(DropUtils.validate("valid filename.txt", false) === true, "Validate loose: valid filename (space)");
-allPassed &= assert(DropUtils.validate("file/name.txt", true) === false, "Validate tight: invalid filename (slash)");
-allPassed &= assert(DropUtils.validate("file:name.txt", false) === false, "Validate loose: invalid filename (colon)");
-allPassed &= assert(DropUtils.validate("control\x00char", true) === false, "Validate: detects null byte");
-allPassed &= assert(DropUtils.validate("control\x1fchar", true) === false, "Validate: detects unit separator");
-allPassed &= assert(DropUtils.validate("control\x7fchar", true) === false, "Validate: detects DEL");
-allPassed &= assert(DropUtils.validate(".", true) === false, "Validate: detects single dot");
-allPassed &= assert(DropUtils.validate("..", true) === false, "Validate: detects double dot");
+allPassed &= assert(AgentUtils.validate("valid_filename.txt", true) === true, "Validate tight: valid filename");
+allPassed &= assert(AgentUtils.validate("valid filename.txt", true) === false, "Validate tight: invalid filename (space)");
+allPassed &= assert(AgentUtils.validate("valid filename.txt", false) === true, "Validate loose: valid filename (space)");
+allPassed &= assert(AgentUtils.validate("file/name.txt", true) === false, "Validate tight: invalid filename (slash)");
+allPassed &= assert(AgentUtils.validate("file:name.txt", false) === false, "Validate loose: invalid filename (colon)");
+allPassed &= assert(AgentUtils.validate("control\x00char", true) === false, "Validate: detects null byte");
+allPassed &= assert(AgentUtils.validate("control\x1fchar", true) === false, "Validate: detects unit separator");
+allPassed &= assert(AgentUtils.validate("control\x7fchar", true) === false, "Validate: detects DEL");
+allPassed &= assert(AgentUtils.validate(".", true) === false, "Validate: detects single dot");
+allPassed &= assert(AgentUtils.validate("..", true) === false, "Validate: detects double dot");
 
 // 5. Test sendToAgent (Integration test with file system)
 const tmpDir = GLib.get_tmp_dir();
@@ -120,7 +120,7 @@ try {
     const attachFile = Gio.File.new_for_path(attachPath);
     attachFile.replace_contents(new TextEncoder().encode("File Content"), null, false, 0, null);
 
-    await DropUtils.sendToAgent(pipePath, "Integration Test", [attachFile]);
+    await AgentUtils.sendToAgent(pipePath, "Integration Test", [attachFile]);
     
     const [success, contents] = Gio.File.new_for_path(pipePath).load_contents(null);
     const decoded = new TextDecoder().decode(contents);
@@ -146,14 +146,14 @@ const binPath = GLib.build_filenamev([tmpDir, `hera_test_${Date.now()}.bin`]);
 try { // eslint-disable-line no-empty
     const txtFile = Gio.File.new_for_path(txtPath);
     txtFile.replace_contents(new TextEncoder().encode("This is plain text."), null, false, 0, null);
-    const isTxt = await DropUtils.isPlainText(txtFile);
+    const isTxt = await AgentUtils.isPlainText(txtFile);
     allPassed &= assert(isTxt === true, "isPlainText identifies .txt as plain text");
 
     const binFile = Gio.File.new_for_path(binPath);
     // Write ELF header bytes to trigger binary detection
     const elfHeader = new Uint8Array([0x7F, 0x45, 0x4C, 0x46, 0x02, 0x01, 0x01, 0x00]);
     binFile.replace_contents(elfHeader, null, false, 0, null);
-    const isBin = await DropUtils.isPlainText(binFile);
+    const isBin = await AgentUtils.isPlainText(binFile);
     allPassed &= assert(isBin === false, "isPlainText identifies ELF binary as not plain text");
 
 } catch (e) {
@@ -172,7 +172,7 @@ const validLine = JSON.stringify({
     isMeta: true,
     attachments: ["test.pdf"]
 });
-const parsed = DropUtils.parseLogLine(validLine);
+const parsed = AgentUtils.parseLogLine(validLine);
 allPassed &= assert(parsed !== null, "parseHistoryLine: valid line is parsed");
 allPassed &= assert(parsed.sender === "agent", "parseHistoryLine: sender extracted");
 allPassed &= assert(parsed.isMeta === true, "parseHistoryLine: isMeta flag extracted");
@@ -180,7 +180,7 @@ allPassed &= assert(parsed.attachments.length === 1, "parseHistoryLine: attachme
 allPassed &= assert(parsed.attachments[0].get_basename() === "test.pdf", "parseHistoryLine: attachment helper works");
 
 const malformed = "{ invalid json }";
-allPassed &= assert(DropUtils.parseLogLine(malformed) === null, "parseHistoryLine: returns null on error");
+allPassed &= assert(AgentUtils.parseLogLine(malformed) === null, "parseHistoryLine: returns null on error");
 
 if (allPassed) {
     print("\n✅ All logic tests passed!");

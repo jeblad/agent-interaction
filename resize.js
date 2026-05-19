@@ -3,13 +3,13 @@
  * Copyright (C) 2019-2024 John Erling Blad
  */
 
-import { DropUtils } from './utils.js';
+import { AgentUtils } from './utils.js';
 import GLib from 'gi://GLib';
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-export class DropResizeHandler {
+export class AgentResizeHandler {
     constructor(dialog, settings, options) {
         this._dialog = dialog;
         this._settings = settings;
@@ -28,7 +28,7 @@ export class DropResizeHandler {
         const isVertical = this._edge === 'left' || this._edge === 'right';
 
         this.handle = new St.Widget({ 
-            style_class: 'drop-resize-handle',
+            style_class: 'agent-resize-handle',
             width: isVertical ? 2 * this._spacing : -1,
             height: isVertical ? -1 : 2 * this._spacing,
             reactive: true,
@@ -38,7 +38,7 @@ export class DropResizeHandler {
         });
 
         this.handle.connect('button-press-event', (actor, event) => this._onButtonPress(actor, event));
-        this.handle.connect('notify::hover', DropUtils.safeCallback(() => {
+        this.handle.connect('notify::hover', AgentUtils.safeCallback(() => {
             if (this.isDragging) return;
             if (this._hoverTimeoutId) {
                 GLib.source_remove(this._hoverTimeoutId);
@@ -46,15 +46,15 @@ export class DropResizeHandler {
             }
 
             if (this.handle.hover) {
-                this._hoverTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, DropUtils.safeCallback(() => {
-                    this.handle.add_style_class_name('drop-resize-handle-hover');
+                this._hoverTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, AgentUtils.safeCallback(() => {
+                    this.handle.add_style_class_name('agent-resize-handle-hover');
                     this._hoverTimeoutId = 0;
                     return GLib.SOURCE_REMOVE;
-                }, 'DropResizeHoverFinish'));
+                }, 'AgentResizeHoverFinish'));
             } else {
-                this.handle.remove_style_class_name('drop-resize-handle-hover');
+                this.handle.remove_style_class_name('agent-resize-handle-hover');
             }
-        }, 'DropResizeHover'));
+        }, 'AgentResizeHover'));
     }
 
     _onButtonPress(actor, event) {
@@ -65,12 +65,12 @@ export class DropResizeHandler {
             GLib.source_remove(this._hoverTimeoutId);
             this._hoverTimeoutId = 0;
         }
-        this.handle.add_style_class_name('drop-resize-handle-active');
+        this.handle.add_style_class_name('agent-resize-handle-active');
 
         if (this._callbacks.onDragStart) this._callbacks.onDragStart();
  
         this._stageHandlers = [
-            global.stage.connect('captured-event', DropUtils.safeCallback((s, e) => {
+            global.stage.connect('captured-event', AgentUtils.safeCallback((s, e) => {
                 const type = e.type();
                 if (type === Clutter.EventType.MOTION) {
                     return this._onMotion(e);
@@ -78,13 +78,13 @@ export class DropResizeHandler {
                     return this._onButtonRelease();
                 }
                 return Clutter.EVENT_PROPAGATE;
-            }, 'DropCapturedEvent'))
+            }, 'AgentCapturedEvent'))
         ];
 
-        this._dragTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 6000, DropUtils.safeCallback(() => {
+        this._dragTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 6000, AgentUtils.safeCallback(() => {
             if (this.isDragging) this._onButtonRelease();
             return GLib.SOURCE_REMOVE;
-        }, 'DropDragFailsafe'));
+        }, 'AgentDragFailsafe'));
 
         return Clutter.EVENT_STOP;
     }
@@ -98,13 +98,13 @@ export class DropResizeHandler {
                 this._stageHandlers = [];
             }
 
-            this.handle.remove_style_class_name('drop-resize-handle-active');
-            if (!this.handle.hover) this.handle.remove_style_class_name('drop-resize-handle-hover');
+            this.handle.remove_style_class_name('agent-resize-handle-active');
+            if (!this.handle.hover) this.handle.remove_style_class_name('agent-resize-handle-hover');
 
-            this._settings.set_int('drop-window-x', Math.round(this._dialog.x));
-            this._settings.set_int('drop-window-y', Math.round(this._dialog.y));
-            this._settings.set_int('drop-window-width', Math.round(this._dialog.width));
-            this._settings.set_int('drop-window-height', Math.round(this._dialog.height));
+            this._settings.set_int('agent-window-x', Math.round(this._dialog.x));
+            this._settings.set_int('agent-window-y', Math.round(this._dialog.y));
+            this._settings.set_int('agent-window-width', Math.round(this._dialog.width));
+            this._settings.set_int('agent-window-height', Math.round(this._dialog.height));
 
             if (this._callbacks.onDragEnd) this._callbacks.onDragEnd();
             return Clutter.EVENT_STOP;

@@ -1,5 +1,5 @@
 /*
- * Agent Interaction - A GNOME extension for communicating with Hera agents.
+ * Agent Interaction - A GNOME extension for communicating with AI agents.
  * Copyright (C) 2019-2024 John Erling Blad
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,13 +27,13 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import { DropUtils } from './utils.js';
-import { DropAccessDialog } from './dialog.js';
+import { AgentUtils } from './utils.js';
+import { AgentAccessDialog } from './dialog.js';
 /**
  * A standard item inside the submenu list.
  */
-const DropMenuItem = GObject.registerClass(
-class DropMenuItem extends PopupMenu.PopupMenuItem {
+const AgentMenuItem = GObject.registerClass(
+class AgentMenuItem extends PopupMenu.PopupMenuItem {
     _init(agentData, isConnected = false, onActivate, settings, gicon) {
         super._init('', {
             style_class: 'quick-settings-menu-item',
@@ -57,7 +57,7 @@ class DropMenuItem extends PopupMenu.PopupMenuItem {
 
         // 1. Status icon
         const status = agentData.status || 'unknown';
-        const statusColor = DropUtils.getStatusColor(this._settings, status);
+        const statusColor = AgentUtils.getStatusColor(this._settings, status);
         this._statusIcon = new St.Icon({
             gicon: gicon,
             icon_size: 14,
@@ -96,20 +96,20 @@ class DropMenuItem extends PopupMenu.PopupMenuItem {
         });
         this.add_child(this._statusLabel);
 
-        this.connect('activate', DropUtils.safeCallback(() => onActivate(), 'DropMenuItem'));
+        this.connect('activate', AgentUtils.safeCallback(() => onActivate(), 'AgentMenuItem'));
     }
 });
 /**
  * The Toggle Button in the Quick Settings grid.
  */
-const DropMenuToggle = GObject.registerClass(
-class DropMenuToggle extends QuickSettings.QuickMenuToggle {
+const AgentMenuToggle = GObject.registerClass(
+class AgentMenuToggle extends QuickSettings.QuickMenuToggle {
     _init(extension, indicator) {
         this._indicator = indicator;
         this._settings = extension.getSettings();
         this._lastAgentsHash = '';
         
-        this._stateGIcon = Gio.FileIcon.new(extension.dir.get_child('icons').get_child('drop-state-symbolic.svg'));
+        this._stateGIcon = Gio.FileIcon.new(extension.dir.get_child('icons').get_child('agent-interaction-state-symbolic.svg'));
 
         super._init({
             title: _('Agent Interaction'),
@@ -125,11 +125,11 @@ class DropMenuToggle extends QuickSettings.QuickMenuToggle {
         this._agentSection = new PopupMenu.PopupMenuSection();
         this.menu.addMenuItem(this._agentSection);
 
-        this.connect('clicked', DropUtils.safeCallback(() => this._indicator.toggleConnection(), 'DropMenuToggle'));
+        this.connect('clicked', AgentUtils.safeCallback(() => this._indicator.toggleConnection(), 'AgentMenuToggle'));
 
-        this.menu.connect('open-state-changed', DropUtils.safeCallback((menu, isOpen) => {
+        this.menu.connect('open-state-changed', AgentUtils.safeCallback((menu, isOpen) => {
             if (isOpen) this._indicator._updateFromDisk();
-        }, 'DropMenuOpen'));
+        }, 'AgentMenuOpen'));
     }
 
     updateState(isConnected, activeAgent, agents = []) {
@@ -157,7 +157,7 @@ class DropMenuToggle extends QuickSettings.QuickMenuToggle {
 
         let statusStyle = '';
         if (isConnected) {
-            const hex = DropUtils.getStatusColor(this._settings, status);
+            const hex = AgentUtils.getStatusColor(this._settings, status);
             if (hex !== '#9a9996')
                 statusStyle = `color: ${hex} !important; background-color: transparent !important;`;
         }
@@ -192,7 +192,7 @@ class DropMenuToggle extends QuickSettings.QuickMenuToggle {
         if (agents.length > 0) {
             agents.forEach(agent => {
                 const isThisActive = activeAgent && agent.uuid === activeAgent.uuid;
-                this._agentSection.addMenuItem(new DropMenuItem(
+                this._agentSection.addMenuItem(new AgentMenuItem(
                     agent,
                     isConnected && isThisActive,
                     () => {
@@ -211,8 +211,8 @@ class DropMenuToggle extends QuickSettings.QuickMenuToggle {
 
         this._agentSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        const settingsItem = new PopupMenu.PopupMenuItem(_('Hera Settings...'));
-        settingsItem.connect('activate', DropUtils.safeCallback(() => {
+        const settingsItem = new PopupMenu.PopupMenuItem(_('Agent Interaction Settings...'));
+        settingsItem.connect('activate', AgentUtils.safeCallback(() => {
             if (Main.panel.statusArea.quickSettings.menu.isOpen)
                 Main.panel.statusArea.quickSettings.menu.close();
             this.menu.close();
@@ -220,10 +220,10 @@ class DropMenuToggle extends QuickSettings.QuickMenuToggle {
             // Using idle_add ensures the menu is fully closed and that
             // Shell has cleaned up the focus stack before we open the prefs window.
             // This allows the window to "rise to the top" as expected.
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, DropUtils.safeCallback(() => {
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, AgentUtils.safeCallback(() => {
                 this._indicator._extension.openPreferences();
                 return GLib.SOURCE_REMOVE;
-            }, 'DropSettingsIdle'));
+            }, 'AgentSettingsIdle'));
         }, 'DropSettingsItem'));
         this._agentSection.addMenuItem(settingsItem);
     }
@@ -232,14 +232,14 @@ class DropMenuToggle extends QuickSettings.QuickMenuToggle {
 /**
  * The System Indicator that lives in the top panel.
  */
-const DropIndicator = GObject.registerClass(
-class DropIndicator extends QuickSettings.SystemIndicator {
+const AgentIndicator = GObject.registerClass(
+class AgentIndicator extends QuickSettings.SystemIndicator {
     _init(extension) {
         super._init();
         this._extension = extension;
         this._settings = extension.getSettings();
 
-        this._stateGIcon = Gio.FileIcon.new(extension.dir.get_child('icons').get_child('drop-state-symbolic.svg'));
+        this._stateGIcon = Gio.FileIcon.new(extension.dir.get_child('icons').get_child('agent-interaction-state-symbolic.svg'));
         this._wasConnected = false;
         this._lastActiveUuid = null;
 
@@ -258,7 +258,7 @@ class DropIndicator extends QuickSettings.SystemIndicator {
         this._indicator.margin_top = 1;
         this._indicator.visible = false;
 
-        this._toggle = new DropMenuToggle(extension, this);
+        this._toggle = new AgentMenuToggle(extension, this);
         this.quickSettingsItems.push(this._toggle);
 
         Main.panel.statusArea.quickSettings.addExternalIndicator(this);
@@ -274,10 +274,10 @@ class DropIndicator extends QuickSettings.SystemIndicator {
 
         try {
             const monitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null);
-            monitor.connect('changed', DropUtils.safeCallback(() => this._updateFromDisk(), 'DropDirMonitor'));
+            monitor.connect('changed', AgentUtils.safeCallback(() => this._updateFromDisk(), 'AgentDirMonitor'));
             this._monitors.set(path, monitor);
         } catch (e) {
-            console.error(`Hera: Monitor error for ${path}: ${e.message}`);
+            console.error(`AgentInteraction: Monitor error for ${path}: ${e.message}`);
         }
     }
 
@@ -285,8 +285,8 @@ class DropIndicator extends QuickSettings.SystemIndicator {
         let win = this._accessWindows.get(agentData.uuid);
         try {
             if (!win) {
-                win = new DropAccessDialog(agentData, this._settings);
-                win.connect('destroy', DropUtils.safeCallback(() => this._accessWindows.delete(agentData.uuid), 'DropDialogDestroy'));
+                win = new AgentAccessDialog(agentData, this._settings);
+                win.connect('destroy', AgentUtils.safeCallback(() => this._accessWindows.delete(agentData.uuid), 'AgentDialogDestroy'));
                 this._accessWindows.set(agentData.uuid, win);
                 // Legger vinduet til i chrome-laget umiddelbart, men siden det er
                 // sammenfoldet (collapsed) i konstruktøren, vises det kun som en 1px stripe.
@@ -295,7 +295,7 @@ class DropIndicator extends QuickSettings.SystemIndicator {
             win.updateState(agentData);
             return win;
         } catch (e) {
-            console.error(`Hera: Error preparing access dialog: ${e.message}`);
+            console.error(`AgentInteraction: Error preparing access dialog: ${e.message}`);
             return null;
         }
     }
@@ -314,7 +314,7 @@ class DropIndicator extends QuickSettings.SystemIndicator {
                 }
                 win.destroy();
             } catch (e) {
-                console.error(`Hera: Failed to close access window: ${e.message}`);
+                console.error(`AgentInteraction: Failed to close access window: ${e.message}`);
             }
         });
         this._accessWindows.clear();
@@ -328,7 +328,7 @@ class DropIndicator extends QuickSettings.SystemIndicator {
     connectToAgent(uuid) {
         this._activeAgentUuid = uuid;
         this._manualDisconnect = false;
-        GLib.idle_add(GLib.PRIORITY_DEFAULT, DropUtils.safeCallback(() => {
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, AgentUtils.safeCallback(() => {
             this._updateFromDisk();
             return GLib.SOURCE_REMOVE;
         }, 'HeraConnectToAgent'));
@@ -371,11 +371,11 @@ class DropIndicator extends QuickSettings.SystemIndicator {
                             allAgents.push(data);
                         }
                     } catch (e) {
-                        console.warn(`Hera: Error reading ${fileInfo.get_name()}: ${e.message}`);
+                        console.warn(`AgentInteracion: Error reading ${fileInfo.get_name()}: ${e.message}`);
                     }
                 }
             } catch (e) {
-                console.warn(`Hera: Could not read directory ${dir.get_path()}: ${e.message}`);
+                console.warn(`AgentInteraction: Could not read directory ${dir.get_path()}: ${e.message}`);
             }
         });
 
@@ -397,7 +397,7 @@ class DropIndicator extends QuickSettings.SystemIndicator {
         this._indicator.gicon = this._stateGIcon;
 
         if (isConnected) {
-            const hex = DropUtils.getStatusColor(this._settings, status);
+            const hex = AgentUtils.getStatusColor(this._settings, status);
             this._indicator.set_style(hex !== '#9a9996' ? `color: ${hex};` : '');
         } else {
             this._indicator.set_style('');
@@ -435,10 +435,10 @@ class DropIndicator extends QuickSettings.SystemIndicator {
     }
 });
 
-export default class DropQuickSettingsExtension extends Extension {
+export default class AgentInteractionExtension extends Extension {
     enable() {
         this.initTranslations();
-        this._indicator = new DropIndicator(this);
+        this._indicator = new AgentIndicator(this);
     }
 
     disable() {

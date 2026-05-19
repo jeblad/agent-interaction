@@ -1,5 +1,5 @@
 /*
- * Agent Interaction - A GNOME extension for communicating with Hera agents.
+ * Agent Interaction - A GNOME extension for communicating with AI agents.
  * Copyright (C) 2019-2024 John Erling Blad
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@ import Gtk from 'gi://Gtk';
 import system from 'system'; // Import system for process ID
 import GLib from 'gi://GLib';
 
-export default class DropPreferences extends ExtensionPreferences {
+export default class AgentPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
 
@@ -110,9 +110,9 @@ export default class DropPreferences extends ExtensionPreferences {
 
                 // Use Gio to write the file (more robust in sandboxes)
                 file.replace_contents(contents, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-                console.log(`Hera: Test file created in ${filePath}`);
+                console.log(`AgentInteraction: Test file created in ${filePath}`);
             } catch (e) {
-                console.error(`Hera: Could not create PID file (Check permissions): ${e.message}`);
+                console.error(`AgentInteraction: Could not create PID file (Check permissions): ${e.message}`);
             }
         };
 
@@ -176,9 +176,9 @@ export default class DropPreferences extends ExtensionPreferences {
 
                 const contents = new TextEncoder().encode(logData);
                 file.replace_contents(contents, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-                console.log(`Hera: Test log created at ${filePath}`);
+                console.log(`AgentInteraction: Test log created at ${filePath}`);
             } catch (e) {
-                console.error(`Hera: Could not create log file: ${e.message}`);
+                console.error(`AgentInteraction: Could not create log file: ${e.message}`);
             }
         };
 
@@ -210,9 +210,9 @@ export default class DropPreferences extends ExtensionPreferences {
                 const testLogFile = Gio.File.new_for_path(GLib.build_filenamev([logDir, 'hera-test-123.log']));
                 if (testLogFile.query_exists(null)) testLogFile.delete(null);
 
-                console.log('Hera: Test data reset successfully.');
+                console.log('AgentInteraction: Test data reset successfully.');
             } catch (e) {
-                console.error(`Hera: Failed to reset test data: ${e.message}`);
+                console.error(`AgentInteraction: Failed to reset test data: ${e.message}`);
             }
         });
         const resetActionRow = new Adw.ActionRow({ title: _('Clear all generated test files') });
@@ -295,9 +295,9 @@ export default class DropPreferences extends ExtensionPreferences {
         });
         mappingGroup.add(newEntryRow);
 
-        // Drop Layout seksjon
+        // Agent Layout seksjon
         const layoutGroup = new Adw.PreferencesGroup({
-            title: _('Drop Window Layout'),
+            title: _('Agent Window Layout'),
             description: _('Manage the layout and size of the floating dialog window'),
         });
 
@@ -311,19 +311,19 @@ export default class DropPreferences extends ExtensionPreferences {
             css_classes: ['destructive-action'],
         });
         resetBtn.connect('clicked', () => {
-            settings.reset('drop-window-x');
-            settings.reset('drop-window-y');
-            settings.reset('drop-window-width');
-            settings.reset('drop-window-height');
-            settings.reset('drop-window-top-margin');
-            settings.reset('drop-window-bottom-margin');
-            settings.reset('drop-window-edge-offset');
-            settings.reset('drop-window-min-width');
-            settings.reset('drop-window-min-height');
-            settings.reset('drop-window-max-display-messages');
-            settings.reset('drop-window-default-scale-width');
-            settings.reset('drop-window-default-max-width');
-            settings.set_boolean('drop-force-reset', true); // Trigger the hard reset in dialog.js
+            settings.reset('agent-window-x');
+            settings.reset('agent-window-y');
+            settings.reset('agent-window-width');
+            settings.reset('agent-window-height');
+            settings.reset('agent-window-top-margin');
+            settings.reset('agent-window-bottom-margin');
+            settings.reset('agent-window-edge-offset');
+            settings.reset('agent-window-min-width');
+            settings.reset('agent-window-min-height');
+            settings.reset('agent-window-max-display-messages');
+            settings.reset('agent-window-default-scale-width');
+            settings.reset('agent-window-default-max-width');
+            settings.set_boolean('agent-force-reset', true); // Trigger the hard reset in dialog.js
         });
         resetLayoutRow.add_suffix(resetBtn);
         layoutGroup.add(resetLayoutRow);
@@ -344,7 +344,7 @@ export default class DropPreferences extends ExtensionPreferences {
                 extensionVersion = metadata.version.toString();
             }
         } catch (e) {
-            console.error(`Hera: Could not read extension version from metadata.json: ${e.message}`);
+            console.error(`AgentInteraction: Could not read extension version from metadata.json: ${e.message}`);
         }
 
         const aboutRow = new Adw.ActionRow({
@@ -357,7 +357,7 @@ export default class DropPreferences extends ExtensionPreferences {
             const aboutWindow = new Adw.AboutWindow({
                 transient_for: window,
                 application_name: _('Agent Interaction'),
-                application_icon: 'drop-state-symbolic',
+                application_icon: 'agent-interaction-state-symbolic',
                 developer_name: 'John Erling Blad',
                 developers: ['John Erling Blad'],
                 translator_credits: 'John Erling Blad',

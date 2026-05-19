@@ -1,6 +1,6 @@
 # Agent Interaction
 
-An advanced GNOME Shell extension for seamless communication with **Hera** (Heuristic Reasoning Agent) through the system's Quick Settings.
+An advanced GNOME Shell extension primarily for seamless communication with **Hera** (Heuristic Reasoning Agent) through the system's Quick Settings.
 
 This project facilitates real-time monitoring and interaction with autonomous agents, providing a discreet "drop window" that glides out from the screen edge for focused dialogue without breaking your workflow.
 
@@ -15,7 +15,7 @@ This project facilitates real-time monitoring and interaction with autonomous ag
 
 ## Architecture & Requirements
 
-Agent Interaction acts as a frontend for agents adhering to the communication protocol used by hera, that is Heuristic Reasoning Agent. It expects agents to be present in:
+Agent Interaction acts as a frontend for agents adhering to the simple communication protocol used by hera, that is Heuristic Reasoning Agent. It expects agents to be present in:
 
 - `/run/hera/` (System-wide agents)
 - `/run/user/$UID/hera/` (User-specific agents)

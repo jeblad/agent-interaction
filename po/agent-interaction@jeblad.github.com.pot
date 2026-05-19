@@ -1,6 +1,6 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the  Quick SettingsHera package.
+# This file is distributed under the same license as the Agent Interaction package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Agent Interaction\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-14 20:49+0200\n"
+"POT-Creation-Date: 2026-05-20 01:00+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,234 +17,257 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: extension.js:92 extension.js:120 prefs.js:226
-msgid "Agent Interaction Access"
+#: extension.js:45 extension.js:141 dialog.js:359
+msgid "Unknown Agent"
 msgstr ""
 
-#: extension.js:101
-msgid "Agent Interaction Service"
+#: extension.js:48 extension.js:144 dialog.js:357
+#, javascript-format
+msgid "%s (%s)"
 msgstr ""
 
-#: extension.js:101
+#: extension.js:115 extension.js:124 extension.js:152 prefs.js:359
+msgid "Agent Interaction"
+msgstr ""
+
+#: extension.js:124
 msgid "Available agents"
 msgstr ""
 
-#: extension.js:174
+#: extension.js:207
 msgid "No agents found"
 msgstr ""
 
-#: extension.js:181
+#: extension.js:214
 msgid "Agent Interaction Settings..."
 msgstr ""
 
-#: prefs.js:44
+#: prefs.js:53
 msgid "Test Tools (Schrödinger)"
 msgstr ""
 
-#: prefs.js:45
-msgid "Override status for debugging"
-msgstr ""
-
-#: prefs.js:50
+#: prefs.js:58
 msgid "Enable override"
 msgstr ""
 
-#: prefs.js:51
+#: prefs.js:59
 msgid "Ignore actual process status"
 msgstr ""
 
-#: prefs.js:58
+#: prefs.js:67
+msgid "Override status for debugging"
+msgstr ""
+
+#: prefs.js:75
 msgid "Agent status (Schrödinger)"
 msgstr ""
 
-#: prefs.js:59
+#: prefs.js:76
 msgid "Determine if the agent should be perceived as alive or dead"
 msgstr ""
 
-#: prefs.js:66
+#: prefs.js:84
 msgid "Generate Test Agent"
 msgstr ""
 
-#: prefs.js:67
+#: prefs.js:85
 msgid "Create a fake .json file in /run/user/$UID/hera"
 msgstr ""
 
-#: prefs.js:88
+#: prefs.js:106
 #, javascript-format
 msgid "Last updated: %s"
 msgstr ""
 
-#: prefs.js:102
+#: prefs.js:120 prefs.js:257
 msgid "Active (Green)"
 msgstr ""
 
-#: prefs.js:109
+#: prefs.js:127 prefs.js:257
 msgid "Inactive (Yellow)"
 msgstr ""
 
-#: prefs.js:121
+#: prefs.js:140
 msgid "Generate Test Log"
 msgstr ""
 
-#: prefs.js:122
+#: prefs.js:141
 msgid "Create a log file with 200 entries for hera-test-123"
 msgstr ""
 
-#: prefs.js:142
-#, javascript-format
-msgid ""
-"This is test message number %d. Checking if scrolling in GNOME 50 works "
-"correctly with many elements."
-msgstr ""
-
-#: prefs.js:157
+#: prefs.js:186
 msgid "Generate 200 Lines"
 msgstr ""
 
-#: prefs.js:166
-msgid "Drop Window Layout"
-msgstr ""
-
-#: prefs.js:167
-msgid "Adjust the placement of the floating dialog window"
-msgstr ""
-
-#: prefs.js:186
-msgid "Placement"
-msgstr ""
-
-#: prefs.js:187
-msgid "Which side of the screen the window should attach to"
-msgstr ""
-
-#: prefs.js:189
-msgid "Left"
-msgstr ""
-
-#: prefs.js:189
-msgid "Right"
-msgstr ""
-
-#: prefs.js:195
-msgid "Top margin"
-msgstr ""
-
-#: prefs.js:195
-msgid "Pixels from top panel"
-msgstr ""
-
 #: prefs.js:196
-msgid "Bottom margin"
-msgstr ""
-
-#: prefs.js:196
-msgid "Pixels from bottom of screen"
-msgstr ""
-
-#: prefs.js:200
-msgid "Information"
+msgid "Reset Test Data"
 msgstr ""
 
 #: prefs.js:218
+msgid "Clear all generated test files"
+msgstr ""
+
+#: prefs.js:225
+msgid "Status Mapping"
+msgstr ""
+
+#: prefs.js:226
+msgid "Map agent status strings to signal colors"
+msgstr ""
+
+#: prefs.js:257
+msgid "Failed (Red)"
+msgstr ""
+
+#: prefs.js:285
+msgid "Add status string..."
+msgstr ""
+
+#: prefs.js:300
+msgid "Agent Window Layout"
+msgstr ""
+
+#: prefs.js:301
+msgid "Manage the layout and size of the floating dialog window"
+msgstr ""
+
+#: prefs.js:305
+msgid "Reset Layout"
+msgstr ""
+
+#: prefs.js:306
+msgid "Restore default placement and size"
+msgstr ""
+
+#: prefs.js:309
+msgid "Reset to Defaults"
+msgstr ""
+
+#: prefs.js:333
+msgid "Information"
+msgstr ""
+
+#: prefs.js:351
 msgid "About Agent Interaction"
 msgstr ""
 
-#: prefs.js:219
+#: prefs.js:352
 #, javascript-format
-msgid "Agent Interaction Access Version %s"
+msgid "Agent Interaction Version %s"
 msgstr ""
 
-#: dialog.js:70
+#: dialog.js:117
 #, javascript-format
 msgid "Session started. Communication: %s.in/out"
 msgstr ""
 
-#: dialog.js:171
+#: dialog.js:441
 msgid "Send message to agent..."
 msgstr ""
 
-#: dialog.js:261
+#: dialog.js:530
+msgid "Interrupt"
+msgstr ""
+
+#: dialog.js:553
+msgid "Interrupt (SIGINT)"
+msgstr ""
+
+#: dialog.js:554
+msgid "Terminate (SIGTERM)"
+msgstr ""
+
+#: dialog.js:555
+msgid "Kill (SIGKILL)"
+msgstr ""
+
+#: dialog.js:570
 msgid "Agent Info"
 msgstr ""
 
-#: dialog.js:266
-msgid "Yes"
+#: dialog.js:581
+msgid "Agent"
 msgstr ""
 
-#: dialog.js:266
-msgid "No"
-msgstr ""
-
-#: dialog.js:268
-#, javascript-format
-msgid ""
-"Agent: %s\n"
-"UUID: %s\n"
-"PID: %s\n"
-"System: %s\n"
-"\n"
-"%s"
-msgstr ""
-
-#: dialog.js:269
+#: dialog.js:581 dialog.js:582 dialog.js:583
 msgid "N/A"
 msgstr ""
 
-#: dialog.js:269
+#: dialog.js:582
+msgid "UUID"
+msgstr ""
+
+#: dialog.js:583
+msgid "PID"
+msgstr ""
+
+#: dialog.js:584
+msgid "System"
+msgstr ""
+
+#: dialog.js:584
+msgid "Yes"
+msgstr ""
+
+#: dialog.js:584
+msgid "No"
+msgstr ""
+
+#: dialog.js:585
+msgid "Description"
+msgstr ""
+
+#: dialog.js:585
 msgid "No description available."
 msgstr ""
 
-#: dialog.js:286
-msgid "Agent settings dialog for status mapping is not yet implemented."
-msgstr ""
-
-#: dialog.js:304
+#: dialog.js:613
 msgid "Select Context Files"
 msgstr ""
 
-#: dialog.js:315
+#: dialog.js:624
 #, javascript-format
 msgid "File “%s” is not plain text and was ignored."
 msgstr ""
 
-#: dialog.js:323 utils.js:243
+#: dialog.js:632 utils.js:260
 msgid "File selection cancelled or failed."
 msgstr ""
 
-#: dialog.js:324
+#: dialog.js:633
 #, javascript-format
-msgid "Agent Interaction: Portal error: %s"
+msgid "AgentInteraction: Portal error: %s"
 msgstr ""
 
-#: dialog.js:453
+#: dialog.js:778
 msgid "You"
 msgstr ""
 
-#: dialog.js:455
+#: dialog.js:780
 #, javascript-format
 msgid "%s • %s"
 msgstr ""
 
-#: dialog.js:557
+#: dialog.js:906
 msgid "--- Session Restored ---"
 msgstr ""
 
-#: dialog.js:669 dialog.js:673 dialog.js:677
+#: dialog.js:1041 dialog.js:1045 dialog.js:1049
 #, javascript-format
 msgid "Signal %s handled"
 msgstr ""
 
-#: dialog.js:705
+#: dialog.js:1079
 #, javascript-format
 msgid "Cannot send signal %s because the PID is unavailable"
 msgstr ""
 
-#: dialog.js:712
+#: dialog.js:1090
 #, javascript-format
 msgid "Sent signal %s to process with PID %s"
 msgstr ""
 
-#: dialog.js:726
+#: dialog.js:1104
 #, javascript-format
 msgid "Error sending to agent: %s"
 msgstr ""

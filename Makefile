@@ -7,7 +7,8 @@ endif
 INSTALL_PATH = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 
 # Kildefiler som skal inkluderes i installasjon og pakking
-JS_FILES = extension.js prefs.js dialog.js utils.js resize.js ease.js
+JS_FILES = extension.js prefs.js utils.js resize.js ease.js
+SRC_FILES = src/dialog.js
 SRC_CONTROLLER = src/controller/history.js
 SRC_VIEW = src/view/history.js
 EXTRA_FILES = metadata.json stylesheet.css LICENSE
@@ -53,6 +54,8 @@ install: build
 	@mkdir -p $(INSTALL_PATH)
 	@cp $(JS_FILES) $(EXTRA_FILES) $(INSTALL_PATH)/ 2>/dev/null || true
 	
+	@mkdir -p $(INSTALL_PATH)/src
+	@cp $(SRC_FILES) $(INSTALL_PATH)/src/
 	@mkdir -p $(INSTALL_PATH)/src/controller $(INSTALL_PATH)/src/view
 	@cp $(SRC_CONTROLLER) $(INSTALL_PATH)/src/controller/
 	@cp $(SRC_VIEW) $(INSTALL_PATH)/src/view/

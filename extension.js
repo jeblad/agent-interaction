@@ -28,7 +28,7 @@ import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js'
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { AgentUtils } from './utils.js';
-import { AgentAccessDialog } from './dialog.js';
+import { AgentAccessDialog } from './src/dialog.js';
 /**
  * A standard item inside the submenu list.
  */

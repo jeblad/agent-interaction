@@ -91,7 +91,7 @@ zip: build
 
 test:
 	@echo "Kjører enhetstester..."
-	@gjs -m tests/unit_tests.js
+	@gjs -m tests/utils_tests.js
 	@gjs -m tests/history_tests.js
 
 release:

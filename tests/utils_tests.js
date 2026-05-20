@@ -86,7 +86,7 @@ allPassed &= assert(AgentUtils.escapePango("No special chars") === "No special c
 allPassed &= assert(AgentUtils.escapePango(null) === "", "escapePango: handles null input");
 allPassed &= assert(AgentUtils.escapePango("") === "", "escapePango: handles empty string");
 
-// 5. Test sanitize (Port of C++ rewrite logic)
+// 6. Test sanitize (Port of C++ rewrite logic)
 allPassed &= assert(AgentUtils.sanitize("file/name.txt", true, '_') === "file_name.txt", "Sanitize tight: replaces slash");
 allPassed &= assert(AgentUtils.sanitize("file:name.txt", false, '_') === "file_name.txt", "Sanitize loose: replaces colon");
 allPassed &= assert(AgentUtils.sanitize("normal_file.txt", true, '_') === "normal_file.txt", "Sanitize: keeps normal chars");
@@ -98,7 +98,7 @@ allPassed &= assert(AgentUtils.sanitize("..", true, '_') === "_", "Sanitize: rep
 allPassed &= assert(AgentUtils.sanitize("My File Name", true, '_') === "My_File_Name", "Sanitize tight: replaces space");
 allPassed &= assert(AgentUtils.sanitize("My File Name", false, '_') === "My File Name", "Sanitize loose: keeps space");
 
-// 6. Test validate (Port of C++ validate logic)
+// 7. Test validate (Port of C++ validate logic)
 allPassed &= assert(AgentUtils.validate("valid_filename.txt", true) === true, "Validate tight: valid filename");
 allPassed &= assert(AgentUtils.validate("valid filename.txt", true) === false, "Validate tight: invalid filename (space)");
 allPassed &= assert(AgentUtils.validate("valid filename.txt", false) === true, "Validate loose: valid filename (space)");
@@ -110,7 +110,7 @@ allPassed &= assert(AgentUtils.validate("control\x7fchar", true) === false, "Val
 allPassed &= assert(AgentUtils.validate(".", true) === false, "Validate: detects single dot");
 allPassed &= assert(AgentUtils.validate("..", true) === false, "Validate: detects double dot");
 
-// 5. Test sendToAgent (Integration test with file system)
+// 8. Test sendToAgent (Integration test with file system)
 const tmpDir = GLib.get_tmp_dir();
 const pipePath = GLib.build_filenamev([tmpDir, `hera_test_pipe_${Date.now()}`]);
 const attachPath = GLib.build_filenamev([tmpDir, `hera_test_attach_${Date.now()}.txt`]);
@@ -139,7 +139,7 @@ try {
     try { Gio.File.new_for_path(attachPath).delete(null); } catch (e) {}
 }
 
-// 7. Test isPlainText
+// 9. Test isPlainText
 const txtPath = GLib.build_filenamev([tmpDir, `hera_test_${Date.now()}.txt`]);
 const binPath = GLib.build_filenamev([tmpDir, `hera_test_${Date.now()}.bin`]);
 
@@ -164,7 +164,7 @@ try { // eslint-disable-line no-empty
     try { Gio.File.new_for_path(binPath).delete(null); } catch (e) {}
 }
 
-// 8. Test parseHistoryLine
+// 10. Test parseLogLine
 const validLine = JSON.stringify({
     sender: "agent",
     text: "Logic test",
@@ -173,14 +173,14 @@ const validLine = JSON.stringify({
     attachments: ["test.pdf"]
 });
 const parsed = AgentUtils.parseLogLine(validLine);
-allPassed &= assert(parsed !== null, "parseHistoryLine: valid line is parsed");
-allPassed &= assert(parsed.sender === "agent", "parseHistoryLine: sender extracted");
-allPassed &= assert(parsed.isMeta === true, "parseHistoryLine: isMeta flag extracted");
-allPassed &= assert(parsed.attachments.length === 1, "parseHistoryLine: attachments extracted");
-allPassed &= assert(parsed.attachments[0].get_basename() === "test.pdf", "parseHistoryLine: attachment helper works");
+allPassed &= assert(parsed !== null, "parseLogLine: valid line is parsed");
+allPassed &= assert(parsed.sender === "agent", "parseLogLine: sender extracted");
+allPassed &= assert(parsed.isMeta === true, "parseLogLine: isMeta flag extracted");
+allPassed &= assert(parsed.attachments.length === 1, "parseLogLine: attachments extracted");
+allPassed &= assert(parsed.attachments[0].get_basename() === "test.pdf", "parseLogLine: attachment helper works");
 
 const malformed = "{ invalid json }";
-allPassed &= assert(AgentUtils.parseLogLine(malformed) === null, "parseHistoryLine: returns null on error");
+allPassed &= assert(AgentUtils.parseLogLine(malformed) === null, "parseLogLine: returns null on error");
 
 if (allPassed) {
     print("\n✅ All logic tests passed!");

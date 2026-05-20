@@ -17,6 +17,7 @@
 
 import { AgentUtils } from './utils.js';
 import { AgentResizeHandler } from './resize.js';
+import { AgentEaseHandler } from './ease.js';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -36,7 +37,6 @@ class AgentAccessDialog extends St.Widget {
         this._settings = settings;
         this._showTimeoutId = 0;
         this._hideTimeoutId = 0;
-        this._animating = false;
         this._surfaceOffset = 0;
         this._surfaceFileIndex = 0; // 0 is current .log, 1 is .log.1, etc.
         this._loadingMore = false;
@@ -66,7 +66,9 @@ class AgentAccessDialog extends St.Widget {
         this._minWidth = this._settings.get_int('agent-window-min-width');
         this._minHeight = this._settings.get_int('agent-window-min-height');
         const geo = this._calculateGeometry(false);
-        this._expandedX = geo.x;
+
+        this._ease = new AgentEaseHandler(this, settings);
+        this._ease.syncState(geo);
 
         // Initialize the Widget
         super._init({
@@ -79,11 +81,6 @@ class AgentAccessDialog extends St.Widget {
             width: geo.width,
             height: geo.height,
         });
-
-        // Determine side for initial state (0=left, 1=right)
-        const monitor = Main.layoutManager.primaryMonitor;
-        this._side = (geo.x + geo.width / 2 > monitor.x + monitor.width / 2) ? 1 : 0;
-        this._expandedX = geo.x;
 
         this._maxDisplayMessages = this._settings.get_int('agent-window-max-display-messages');
         this._setupResizers(settings, this._edgeOffset);
@@ -132,14 +129,14 @@ class AgentAccessDialog extends St.Widget {
             this._mainContent.set_width(this.width - (this._edgeOffset * 2));
             this._mainContent.set_height(this.height - (this._edgeOffset * 2));
             this._resizers.forEach(r => r.updateLayout());
-            if (this.x !== this._expandedX) this._expandedX = this.x; // Keep _expandedX in sync if dialog moves
+            if (this.x !== this._ease.expandedX) this._ease.expandedX = this.x; // Keep _expandedX in sync if dialog moves
         };
 
         // 1. Inner Side Resizer
         this._resizers.push(new AgentResizeHandler(this, settings, {
             ...common,
             minWidth: this._minWidth, minHeight: this._minHeight,
-            edge: (this._side === 1) ? 'left' : 'right',
+            edge: (this._ease.side === 1) ? 'left' : 'right',
             edgeOffset,
             callbacks: { onResize: updateContentAndResizers }
         }));
@@ -166,7 +163,7 @@ class AgentAccessDialog extends St.Widget {
         this._resizers.push(new AgentResizeHandler(this, settings, {
             ...common,
             minWidth: this._minWidth, minHeight: this._minHeight,
-            edge: (this._side === 1) ? 'right' : 'left',
+            edge: (this._ease.side === 1) ? 'right' : 'left',
             edgeOffset,
             callbacks: { onResize: updateContentAndResizers }
         }));
@@ -229,9 +226,9 @@ class AgentAccessDialog extends St.Widget {
         // Check against the area where the window is actually shown (expanded state)
         // We add a small margin (2px) to avoid "edge-to-edge" issues
         const myRect = {
-            x1: this._expandedX + this._edgeOffset + 2,
+            x1: this._ease.expandedX + this._edgeOffset + 2,
             y1: this.y + this._edgeOffset + 2,
-            x2: this._expandedX + this.width - this._edgeOffset - 2,
+            x2: this._ease.expandedX + this.width - this._edgeOffset - 2,
             y2: this.y + this.height - this._edgeOffset - 2
         };
 
@@ -282,35 +279,10 @@ class AgentAccessDialog extends St.Widget {
 
     _refreshLayoutFromSettings(forceDefaults = false) {
         const geo = this._calculateGeometry(forceDefaults);
-        const monitor = Main.layoutManager.primaryMonitor;
-        
-        this._side = (geo.x + geo.width / 2 > monitor.x + monitor.width / 2) ? 1 : 0;
-        this._expandedX = geo.x;
 
-        // Calculate translation that moves the window completely off-screen from where it stands
-        let targetTranslation = 0;
-        if (this._isCollapsed) {
-            targetTranslation = (this._side === 1)
-                ? (monitor.x + monitor.width - geo.x - this._edgeOffset) 
-                : -(geo.x + geo.width - monitor.x - this._edgeOffset);
-        }
-
-        this.remove_all_transitions();
-        this._animating = true;
-
-        this.ease({
-            x: geo.x,
-            y: geo.y,
-            width: geo.width,
-            height: geo.height,
-            translation_x: targetTranslation,
-            duration: this._isCollapsed ? 0 : 500,
-            mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
-            onComplete: () => {
-                this._mainContent.set_size(geo.width - (this._edgeOffset * 2), geo.height - (this._edgeOffset * 2));
-                this._resizers.forEach(r => r.updateLayout());
-                this._animating = false;
-            }
+        this._ease.refreshLayout(geo, this._edgeOffset, () => {
+            this._mainContent.set_size(geo.width - (this._edgeOffset * 2), geo.height - (this._edgeOffset * 2));
+            this._resizers.forEach(r => r.updateLayout());
         });
     }
 
@@ -325,9 +297,8 @@ class AgentAccessDialog extends St.Widget {
         });
 
         this.set_position(geo.x, geo.y);
-        this._expandedX = geo.x;
-        this.translation_x = (this._side === 1) ? (geo.width - this._edgeOffset * 2) : -(geo.width - this._edgeOffset * 2);
-        this._isCollapsed = true; // Ensure it starts collapsed
+        this.translation_x = (this._ease.side === 1) ? (geo.width - this._edgeOffset * 2) : -(geo.width - this._edgeOffset * 2);
+        this._ease.isCollapsed = true; // Ensure it starts collapsed
     }
 
     _setupPaths() {
@@ -588,24 +559,23 @@ class AgentAccessDialog extends St.Widget {
     }
 
     _setupHoverLogic() {
-        this._isCollapsed = true;
         this.connect('notify::hover', AgentUtils.safeCallback(() => {
             this._syncHoverState();
         }, 'AgentHoverNotify'));
     }
 
     _syncHoverState() {
-        if (this._animating) return;
+        if (this._ease.isAnimating) return;
         const isAnyDragging = this._resizers.some(r => r.isDragging);
         if (isAnyDragging) return;
 
         const occluded = this._checkOcclusion();
 
         if (this.hover) {
-            if (this._isCollapsed) this._onMouseEnter();
+            if (this._ease.isCollapsed) this._onMouseEnter();
         } else {
-            if (occluded && !this._isCollapsed) this._onMouseLeave();
-            else if (!occluded && this._isCollapsed) this._onMouseEnter();
+            if (occluded && !this._ease.isCollapsed) this._onMouseLeave();
+            else if (!occluded && this._ease.isCollapsed) this._onMouseEnter();
         }
     }
 
@@ -671,7 +641,7 @@ class AgentAccessDialog extends St.Widget {
     }
 
     _onMouseLeave() {
-        if (this._animating || this._isCollapsed) return;
+        if (this._ease.isAnimating || this._ease.isCollapsed) return;
         const isAnyDragging = this._resizers.some(r => r.isDragging);
         if (isAnyDragging || this._entry.clutter_text.has_focus || (this._sigMenu && this._sigMenu.isOpen) || !this._checkOcclusion())
             return;
@@ -687,36 +657,13 @@ class AgentAccessDialog extends St.Widget {
             if (this._resizers.some(r => r.isDragging) || !stillOccluded || this.hover) 
                 return GLib.SOURCE_REMOVE;
 
-            const monitor = Main.layoutManager.primaryMonitor; // eslint-disable-line no-unused-vars
-            if (!this._isCollapsed) this._expandedX = this.x;
-            this._animating = true; // Set the flag BEFORE GSettings to block the "changed" loop
-
-            // Derive hide direction from current position
-            const isRight = (this.x + this.width / 2 > monitor.x + monitor.width / 2);
-            const targetTranslation = isRight 
-                ? (monitor.x + monitor.width - this.x - this._edgeOffset) 
-                : -(this.x + this.width - monitor.x - this._edgeOffset);
-
-            this.ease({
-                x: this.x,
-                translation_x: targetTranslation,
-                duration: 500,
-                mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
-                onComplete: AgentUtils.safeCallback(() => {
-                    this._isCollapsed = true;
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, AgentUtils.safeCallback(() => {
-                        this._animating = false;
-                        this._syncHoverState();
-                        return GLib.SOURCE_REMOVE;
-                    }, 'AgentHideCooldown'));
-                }, 'AgentHideComplete')
-            });
+            this._ease.collapse(this._edgeOffset, () => this._syncHoverState());
             return GLib.SOURCE_REMOVE;
         }, 'AgentHideTimeout'));
     }
 
     _onMouseEnter() {
-        if (this._animating || !this._isCollapsed || this._resizers.some(r => r.isDragging)) return;
+        if (this._ease.isAnimating || !this._ease.isCollapsed || this._resizers.some(r => r.isDragging)) return;
 
         if (this._hideTimeoutId) {
             GLib.source_remove(this._hideTimeoutId);
@@ -725,21 +672,9 @@ class AgentAccessDialog extends St.Widget {
         if (this._showTimeoutId) return; // eslint-disable-line no-empty
         this._showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, AgentUtils.safeCallback(() => {
             this._showTimeoutId = 0;
-            this._animating = true;
-            this.ease({
-                x: this._expandedX,
-                translation_x: 0,
-                duration: 500,
-                mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
-                onComplete: AgentUtils.safeCallback(() => {
-                    this._isCollapsed = false;
-                    this._entry.clutter_text.grab_key_focus();
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, AgentUtils.safeCallback(() => {
-                        this._animating = false;
-                        this._syncHoverState();
-                        return GLib.SOURCE_REMOVE;
-                    }, 'AgentShowCooldown'));
-                }, 'AgentShowComplete')
+            this._ease.expand(() => {
+                this._entry.clutter_text.grab_key_focus();
+                this._syncHoverState();
             });
             return GLib.SOURCE_REMOVE;
         }, 'AgentShowTimeout'));
@@ -967,7 +902,7 @@ class AgentAccessDialog extends St.Widget {
 
         // If the window is hidden on the side, animate it forward.
         // Otherwise, just give focus to the text field.
-        if (this._isCollapsed)
+        if (this._ease.isCollapsed)
             this._onMouseEnter();
         else
             this._entry.clutter_text.grab_key_focus();

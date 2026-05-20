@@ -6,17 +6,21 @@ endif
 
 INSTALL_PATH = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 
+# Kildefiler som skal inkluderes i installasjon og pakking
+JS_FILES = extension.js prefs.js dialog.js utils.js resize.js ease.js
+EXTRA_FILES = metadata.json stylesheet.css LICENSE
+
 .PHONY: all build install clean enable disable zip test pot translations update-po
 
 all: test build
 
 pot:
-	@echo "Ekstraherer oversettbare strenger til po/$(UUID).pot..."
+	@echo "Ekstraherer oversettbare strenger..."
 	@mkdir -p po
 	@xgettext --from-code=UTF-8 --language=JavaScript --keyword=_ \
 		--package-name="Agent Interaction" \
 		--output=po/$(UUID).pot \
-		extension.js prefs.js dialog.js utils.js resize.js
+		$(JS_FILES)
 
 update-po: pot
 	@for po in po/*.po; do \
@@ -44,16 +48,10 @@ build: translations
 
 install: build
 	@echo "Installerer til $(INSTALL_PATH)..."
-	@mkdir -p $(INSTALL_PATH)/icons
-	@mkdir -p $(INSTALL_PATH)/schemas
-	@cp metadata.json $(INSTALL_PATH)/
-	@cp extension.js $(INSTALL_PATH)/
-	@cp dialog.js $(INSTALL_PATH)/
-	@cp utils.js $(INSTALL_PATH)/
-	@cp resize.js $(INSTALL_PATH)/
-	@cp prefs.js $(INSTALL_PATH)/
-	@cp stylesheet.css $(INSTALL_PATH)/
-	@cp LICENSE $(INSTALL_PATH)/ 2>/dev/null || true
+	@mkdir -p $(INSTALL_PATH)
+	@cp $(JS_FILES) $(EXTRA_FILES) $(INSTALL_PATH)/ 2>/dev/null || true
+	
+	@mkdir -p $(INSTALL_PATH)/icons $(INSTALL_PATH)/schemas
 	@cp icons/*.svg $(INSTALL_PATH)/icons/ 2>/dev/null || true
 	@cp schemas/*.xml $(INSTALL_PATH)/schemas/
 	@cp -r locale $(INSTALL_PATH)/ 2>/dev/null || true
@@ -79,7 +77,7 @@ zip: build
 	@echo "Lager pakke for distribusjon..."
 	@rm -f $(UUID).shell-extension.zip
 	@mkdir -p _dist
-	@cp metadata.json extension.js dialog.js utils.js resize.js prefs.js stylesheet.css LICENSE _dist/ 2>/dev/null || true
+	@cp $(JS_FILES) $(EXTRA_FILES) _dist/ 2>/dev/null || true
 	@cp -r icons schemas locale _dist/ 2>/dev/null || true
 	@cd _dist && zip -qr ../$(UUID).shell-extension.zip .
 	@rm -rf _dist

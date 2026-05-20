@@ -18,6 +18,8 @@
 import { AgentUtils } from './utils.js';
 import { AgentResizeHandler } from './resize.js';
 import { AgentEaseHandler } from './ease.js';
+import { AgentSurfaceHistory } from './src/controller/history.js';
+import { AgentSurfaceView } from './src/view/history.js';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -37,9 +39,6 @@ class AgentAccessDialog extends St.Widget {
         this._settings = settings;
         this._showTimeoutId = 0;
         this._hideTimeoutId = 0;
-        this._surfaceOffset = 0;
-        this._surfaceFileIndex = 0; // 0 is current .log, 1 is .log.1, etc.
-        this._loadingMore = false;
         this._attachments = []; // List of selected attachments: { file, selected }
         this._signalButtons = {}; // Stores references to buttons
         this._windowSignals = [];
@@ -90,10 +89,13 @@ class AgentAccessDialog extends St.Widget {
         this.add_child(this._mainContent);
         this._resizers.forEach(resizer => resizer.attach(this._mainContent));
 
-        this._setupPaths();
-        
-        this._mainContent.add_child(this._createHeader()); // Wrapped in safeCallback
+        this._view = new AgentSurfaceView(agentData);
+        this._mainContent.add_child(this._createHeader());
         this._mainContent.add_child(this._createChatArea()); // Wrapped in safeCallback
+
+        this._history = new AgentSurfaceHistory(this._view, this._logBin, this._vAdj, agentData, settings);
+        this._setupPaths();
+
         this._mainContent.add_child(this._createFileBin()); // Wrapped in safeCallback
         this._mainContent.add_child(this._createInputEntry()); // Wrapped in safeCallback
 
@@ -109,9 +111,9 @@ class AgentAccessDialog extends St.Widget {
         this._setupWindowTracking();
         this._syncHoverState();
         // Initial load and setup
-        this._loadSurfaceHistory();
+        this._history.loadInitialHistory();
         this._watchOutPipe();
-        this._appendMessage('system', _('Session started. Communication: %s.in/out').format(agentData.uuid), null, false, false, true);
+        this._history.appendMessage('system', _('Session started. Communication: %s.in/out').format(agentData.uuid), { save: false, skipLimit: true });
     }
 
     _setupResizers(settings, edgeOffset) {
@@ -302,38 +304,15 @@ class AgentAccessDialog extends St.Widget {
     }
 
     _setupPaths() {
-        const agentData = this._agent;
-        const runDir = agentData.isSystem ? '/run/hera' : GLib.build_filenamev([GLib.get_user_runtime_dir(), 'hera']);
-        this._inPipePath = GLib.build_filenamev([runDir, `${agentData.uuid}.in`]);
-        this._outPipePath = GLib.build_filenamev([runDir, `${agentData.uuid}.out`]);
-
-        let logDir;
-        if (agentData.isSystem) {
-            logDir = '/var/log/hera';
-        } else {
-            logDir = GLib.build_filenamev([GLib.get_user_data_dir(), 'hera', 'logs']);
-            GLib.mkdir_with_parents(logDir, 0o700);
-        }
-        
-        // Surface log: The visible "effects" and communication
-        this._surfaceLogPath = GLib.build_filenamev([logDir, `${agentData.uuid}.log`]);
-        // Observation log: Future placeholder for agent-side internal observations
-        this._observationLogPath = GLib.build_filenamev([logDir, `${agentData.uuid}.obs`]);
-    }
-
-    _getAgentDisplayName() {
-        const agent = this._agent;
-        if (agent.callsign) {
-            const shortId = agent.short || (agent.uuid ? agent.uuid.substring(0, 4) : null);
-            return shortId ? _('%s (%s)').format(agent.callsign, shortId) : agent.callsign;
-        }
-        return agent.uuid || agent.model || _('Unknown Agent');
+        const runDir = AgentUtils.getRunDir(this._agent.isSystem);
+        this._inPipePath = GLib.build_filenamev([runDir, `${this._agent.uuid}.in`]);
+        this._outPipePath = GLib.build_filenamev([runDir, `${this._agent.uuid}.out`]);
     }
 
     _createHeader() {
         const header = new St.BoxLayout({ vertical: false, style_class: 'drop-header' });
 
-        const displayName = this._getAgentDisplayName();
+        const displayName = this._view.getDisplayName();
 
         const titleLabel = new St.Label({
             text: displayName.toUpperCase(),
@@ -364,8 +343,8 @@ class AgentAccessDialog extends St.Widget {
         
         this._vAdj = this._scroll.get_vadjustment(); // eslint-disable-line no-unused-vars
         this._vAdj.connect('notify::value', AgentUtils.safeCallback(() => {
-            if (this._vAdj.value <= this._vAdj.lower && !this._loadingMore && this._surfaceOffset > 0) {
-                this._loadMoreSurfaceHistory();
+            if (this._vAdj.value <= this._vAdj.lower && !this._history.loadingMore && this._history.offset > 0) {
+                this._history.loadMoreHistory();
             }
         }, 'AgentScroll'));
 
@@ -555,7 +534,7 @@ class AgentAccessDialog extends St.Widget {
             [_('System')]: this._agent.isSystem ? _('Yes') : _('No'),
             [_('Description')]: this._agent.description || _('No description available.')
         };
-        this._appendMessage('system', report);
+        this._history.appendMessage('system', report);
     }
 
     _setupHoverLogic() {
@@ -591,7 +570,7 @@ class AgentAccessDialog extends St.Widget {
                     if (await AgentUtils.isPlainText(file)) {
                         this._attachments.push({ file, selected: true }); // eslint-disable-line max-len
                     } else {
-                        this._appendMessage('system', _('File “%s” is not plain text and was ignored.').format(file.get_basename()), null, false);
+                        this._history.appendMessage('system', _('File “%s” is not plain text and was ignored.').format(file.get_basename()), { save: false });
                     }
                 }
                 this._updateFileBin();
@@ -600,7 +579,7 @@ class AgentAccessDialog extends St.Widget {
                 // The error is already logged by safeCallback in HeraUtils, or it's a user cancellation.
                 // No need to show an error message to the user for cancellation.
                 if (e.message !== _('File selection cancelled or failed.')) {
-                    this._appendMessage('system', _('AgentInteraction: Portal error: %s').format(e.message), null, false);
+                    this._history.appendMessage('system', _('AgentInteraction: Portal error: %s').format(e.message), { save: false });
                 }
             }
         })();
@@ -680,217 +659,6 @@ class AgentAccessDialog extends St.Widget {
         }, 'AgentShowTimeout'));
     }
 
-    /**
-     * Creates and returns a St.BoxLayout representing a single message bubble.
-     * Handles styling, sender info, message text, and attachments.
-     * @param {string} sender - 'user', 'agent', or 'system'.
-     * @param {string} text - The message text.
-     * @param {string} displayTime - Formatted time string.
-     * @param {boolean} isMeta - True if this is a meta-message (e.g., signal confirmation).
-     * @param {Array<Gio.File|object>} attachments - List of attachment files or objects with get_basename().
-     * @param {boolean} indent - True if the message should be indented (e.g., for signal confirmations).
-     * @returns {St.BoxLayout} The constructed message bubble.
-     */
-    _createMessageBubble(sender, text, displayTime, isMeta, attachments, indent) {
-        const isUser = sender === 'user';
-        const isSystem = sender === 'system';
-        const isMetaMsg = isMeta || isSystem;
-
-        const styleClasses = ['agent-message-bubble'];
-        if (isUser) styleClasses.push('agent-message-user');
-        else if (isSystem) styleClasses.push('agent-message-system');
-        else styleClasses.push('agent-message-agent');
-        
-        if (isMetaMsg) styleClasses.push('agent-message-meta');
-        if (indent) styleClasses.push('agent-message-indented');
-
-        const msgBox = new St.BoxLayout({
-            vertical: true,
-            style_class: styleClasses.join(' '),
-            x_align: isUser ? Clutter.ActorAlign.END : (isSystem ? Clutter.ActorAlign.CENTER : Clutter.ActorAlign.START),
-        });
-
-        const senderName = isUser ? _('You') : this._getAgentDisplayName();
-        const meta = new St.Label({
-            text: _('%s • %s').format(senderName, displayTime),
-            style_class: 'agent-message-meta-label'
-        });
-        msgBox.add_child(meta);
-
-        if (typeof text === 'object' && text !== null) {
-            msgBox.add_child(this._createReportGrid(text));
-        } else if (text && text.length > 0) {
-            // Escape agent output to prevent Pango markup injection
-            const displayedText = (sender === 'agent' || sender === 'system') ? AgentUtils.escapePango(text) : text;
-            const content = new St.Label({
-                text: displayedText,
-                style_class: 'agent-message-content',
-                x_expand: true,
-            });
-            content.clutter_text.line_wrap = true;
-            content.clutter_text.line_wrap_mode = Pango.WrapMode.WORD;
-            content.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-            msgBox.add_child(content);
-        }
-
-        if (attachments.length > 0) {
-            const attachmentsRow = new St.BoxLayout({ vertical: false, style_class: 'agent-message-attachments', x_expand: true });
-            attachments.forEach(file => {
-                const chip = new St.BoxLayout({ vertical: false, style_class: 'agent-message-attachment-chip' });
-                // Ensure basename is available, or use a placeholder
-                const fileName = file.get_basename ? file.get_basename() : String(file);
-                chip.add_child(new St.Label({ text: fileName, style: 'font-size: 0.8em; color: #ddd;' }));
-                attachmentsRow.add_child(chip);
-            });
-            msgBox.add_child(attachmentsRow);
-        }
-        return msgBox;
-    }
-
-    _createReportGrid(data) {
-        const grid = new St.BoxLayout({ vertical: true, style_class: 'agent-report-grid' });
-        for (const [key, value] of Object.entries(data)) {
-            const row = new St.BoxLayout({ vertical: false, style_class: 'agent-report-row' });
-            const keyLabel = new St.Label({ 
-                text: `${key}:`, 
-                style_class: 'agent-report-key'
-            });
-            const valLabel = new St.Label({ text: String(value), style_class: 'agent-report-val' });
-            row.add_child(keyLabel);
-            row.add_child(valLabel);
-            grid.add_child(row);
-        }
-        return grid;
-    }
-
-    _appendMessage(sender, text, time = null, save = true, prepend = false, skipLimit = false, isMeta = false, attachments = [], indent = false) {
-        const date = time ? new Date(time) : new Date();
-        const timestamp = date.toISOString();
-        const displayTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        // --- Input Filtering (User to Agent) ---
-        // For user input, `HeraUtils.sendToAgent` already uses TextEncoder, which handles basic encoding for transport. // eslint-disable-line max-len
-        // If specific filtering (e.g., removing certain characters or patterns) is needed *before* sending to the agent,
-        // it should be implemented here or in HeraUtils.sendToAgent. For a general chat, usually all text is allowed.
-        // The agent itself should be robust against malicious input.
-
-        if (!skipLimit) {
-            const children = this._logBin.get_children();
-            if (children.length >= this._maxDisplayMessages) {
-                if (prepend) children[children.length - 1].destroy(); // eslint-disable-line max-len
-                else children[0].destroy();
-            }
-        }
-        const msgBox = this._createMessageBubble(sender, text, displayTime, isMeta, attachments, indent);
-        
-        if (prepend) this._logBin.insert_child_at_index(msgBox, 0);
-        else this._logBin.add_child(msgBox);
-
-        if (!prepend) {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._vAdj.value = this._vAdj.upper - this._vAdj.page_size;
-                return GLib.SOURCE_REMOVE;
-            });
-        }
-        if (save && sender !== 'system') this._saveToSurfaceLog(sender, text, timestamp, isMeta, attachments);
-    }
-
-    /**
-     * Renders a batch of history lines.
-     * @param {string[]} lines - Array of JSON strings.
-     * @param {boolean} prepend - Whether to prepend or append.
-     */
-    _renderLogLines(lines, prepend) {
-        if (prepend) {
-            for (let i = lines.length - 1; i >= 0; i--) {
-                const msg = AgentUtils.parseLogLine(lines[i]);
-                if (msg) // eslint-disable-line no-empty
-                    this._appendMessage(msg.sender, msg.text, msg.timestamp, false, true, true, msg.isMeta, msg.attachments);
-            }
-        } else {
-            lines.forEach(line => {
-                const msg = AgentUtils.parseLogLine(line);
-                if (msg)
-                    this._appendMessage(msg.sender, msg.text, msg.timestamp, false, false, true, msg.isMeta, msg.attachments);
-            });
-        }
-    }
-
-    _saveToSurfaceLog(sender, text, timestamp, isMeta = false, attachments = []) {
-        try {
-            const attachmentNames = attachments.map(file => file.get_basename());
-            const entry = JSON.stringify({ sender, text, timestamp, isMeta, attachments: attachmentNames }) + '\n';
-            const file = Gio.File.new_for_path(this._surfaceLogPath);
-            const outputStream = file.append_to(Gio.FileCreateFlags.NONE, null);
-            outputStream.write_all(entry, null);
-            outputStream.close(null);
-        } catch (e) { console.error(`Drop: Failed to save surface log: ${e.message}`); }
-    }
-
-    _loadSurfaceHistory() {
-        const file = Gio.File.new_for_path(this._surfaceLogPath);
-        if (!file.query_exists(null)) return;
-        this._surfaceFileIndex = 0;
-        try {
-            const [success, contents] = file.load_contents(null);
-            if (success) {
-                const allLines = new TextDecoder().decode(contents).split('\n').filter(l => l.trim());
-                const recentLines = allLines.slice(-this._maxDisplayMessages);
-                this._surfaceOffset = recentLines.length;
-                this._renderLogLines(recentLines, false);
-                this._appendMessage('system', _('--- Session Restored ---'), null, false, false, true);
-            }
-        } catch (e) { console.error(`Drop: Failed to load surface history: ${e.message}`); }
-    }
-
-    _loadMoreSurfaceHistory() {
-        if (this._loadingMore) return;
-        this._loadingMore = true;
-
-        const attemptLoad = () => {
-            const currentPath = this._surfaceFileIndex === 0
-                ? this._surfaceLogPath
-                : `${this._surfaceLogPath}.${this._surfaceFileIndex}`;
-            
-            const file = Gio.File.new_for_path(currentPath);
-
-            if (!file.query_exists(null)) {
-                this._loadingMore = false;
-                return;
-            }
-
-            try {
-                const [success, contents] = file.load_contents(null);
-                if (success) {
-                    const allLines = new TextDecoder().decode(contents).split('\n').filter(l => l.trim());
-                    
-                    if (this._surfaceOffset >= allLines.length) {
-                        // Reached the top of this file, try the next rotation (.log.N)
-                        this._surfaceFileIndex++;
-                        this._surfaceOffset = 0;
-                        attemptLoad();
-                        return;
-                    }
-
-                const res = AgentUtils.getLinesToDisplay(allLines, this._surfaceOffset, Math.floor(this._maxDisplayMessages / 2)); // eslint-disable-line max-len
-                    if (res.lines.length > 0) {
-                        this._renderLogLines(res.lines, true);
-                        this._surfaceOffset = res.newOffset;
-                        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
-                            if (this._vAdj.value <= this._vAdj.lower) this._vAdj.value = 20;
-                            return GLib.SOURCE_REMOVE;
-                        });
-                    }
-                }
-            } catch (e) {
-                console.error(`Drop: Error loading rotated surface history: ${e.message}`);
-            }
-            this._loadingMore = false;
-        };
-
-        attemptLoad();
-    }
-
     show() {
         if (!this.get_parent()) Main.layoutManager.addChrome(this, { trackHover: true });
 
@@ -961,7 +729,7 @@ class AgentAccessDialog extends St.Widget {
             try { // eslint-disable-line no-empty
                 const [line] = stream.read_line_finish_utf8(res);
                 if (line !== null) {
-                    this._appendMessage('agent', line);
+                    this._history.appendMessage('agent', line);
                     this._handleAgentResponse(line);
                     this._readNextLine(stream);
                 } else this._watchOutPipe();
@@ -973,15 +741,15 @@ class AgentAccessDialog extends St.Widget {
         const text = line.toLowerCase();
         if (text.includes('sigint handled')) {
             this._setButtonState('INT', 'active'); // eslint-disable-line max-len
-            this._appendMessage('agent', _('Signal %s handled').format('SIGINT'), null, true, false, false, true, [], true); // eslint-disable-line max-len
+            this._history.appendMessage('agent', _('Signal %s handled').format('SIGINT'), { isMeta: true, indent: true }); // eslint-disable-line max-len
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => { this._setButtonState('INT', 'idle'); return GLib.SOURCE_REMOVE; });
         } else if (text.includes('sigstop handled')) {
             this._setButtonState('STOP', 'active'); // eslint-disable-line max-len
-            this._appendMessage('agent', _('Signal %s handled').format('SIGSTOP'), null, true, false, false, true, [], true); // eslint-disable-line max-len
+            this._history.appendMessage('agent', _('Signal %s handled').format('SIGSTOP'), { isMeta: true, indent: true }); // eslint-disable-line max-len
             this._setButtonState('CONT', 'idle');
         } else if (text.includes('sigcont handled')) {
             this._setButtonState('CONT', 'active'); // eslint-disable-line max-len
-            this._appendMessage('agent', _('Signal %s handled').format('SIGCONT'), null, true, false, false, true, [], true); // eslint-disable-line max-len
+            this._history.appendMessage('agent', _('Signal %s handled').format('SIGCONT'), { isMeta: true, indent: true }); // eslint-disable-line max-len
             this._setButtonState('STOP', 'idle');
         }
     }
@@ -1011,7 +779,7 @@ class AgentAccessDialog extends St.Widget {
     }
 
     _sendSignal(sig) {
-        if (!this._agent.pid) { this._appendMessage('system', _('Cannot send signal %s because the PID is unavailable').format(sig), null, true, false, false, true); return; }
+        if (!this._agent.pid) { this._history.appendMessage('system', _('Cannot send signal %s because the PID is unavailable').format(sig), { isMeta: true }); return; }
         
         // Visual feedback on the main button for destructive signals as well
         const feedbackId = (sig === 'TERM' || sig === 'KILL') ? 'INT' : sig;
@@ -1022,7 +790,7 @@ class AgentAccessDialog extends St.Widget {
             if (data && data.button.has_style_class_name('button-pending')) this._setButtonState(feedbackId, 'idle');
             return GLib.SOURCE_REMOVE;
         });
-        this._appendMessage('user', _('Sent signal %s to process with PID %s').format(sig, this._agent.pid), null, true, false, false, true, [], true);
+        this._history.appendMessage('user', _('Sent signal %s to process with PID %s').format(sig, this._agent.pid), { isMeta: true, indent: true });
         GLib.spawn_command_line_async(`kill -s ${sig} ${this._agent.pid}`);
     }
 
@@ -1030,13 +798,13 @@ class AgentAccessDialog extends St.Widget {
         const text = this._entry.text;
         const attachments = this._attachments.filter(entry => entry.selected).map(entry => entry.file);
         if (!text && attachments.length === 0) return;
-        this._appendMessage('user', text, null, true, false, false, true, attachments);
+        this._history.appendMessage('user', text, { attachments });
         this._entry.text = ''; this._attachments = []; this._updateFileBin();
 
         try {
             await AgentUtils.sendToAgent(this._inPipePath, text, attachments);
         } catch (e) {
-            this._appendMessage('system', _('Error sending to agent: %s').format(e.message));
+            this._history.appendMessage('system', _('Error sending to agent: %s').format(e.message));
         }
     }
 });

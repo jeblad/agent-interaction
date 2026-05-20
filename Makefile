@@ -8,6 +8,8 @@ INSTALL_PATH = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 
 # Kildefiler som skal inkluderes i installasjon og pakking
 JS_FILES = extension.js prefs.js dialog.js utils.js resize.js ease.js
+SRC_CONTROLLER = src/controller/history.js
+SRC_VIEW = src/view/history.js
 EXTRA_FILES = metadata.json stylesheet.css LICENSE
 
 .PHONY: all build install clean enable disable zip test pot translations update-po
@@ -51,6 +53,10 @@ install: build
 	@mkdir -p $(INSTALL_PATH)
 	@cp $(JS_FILES) $(EXTRA_FILES) $(INSTALL_PATH)/ 2>/dev/null || true
 	
+	@mkdir -p $(INSTALL_PATH)/src/controller $(INSTALL_PATH)/src/view
+	@cp $(SRC_CONTROLLER) $(INSTALL_PATH)/src/controller/
+	@cp $(SRC_VIEW) $(INSTALL_PATH)/src/view/
+
 	@mkdir -p $(INSTALL_PATH)/icons $(INSTALL_PATH)/schemas
 	@cp icons/*.svg $(INSTALL_PATH)/icons/ 2>/dev/null || true
 	@cp schemas/*.xml $(INSTALL_PATH)/schemas/
@@ -78,7 +84,7 @@ zip: build
 	@rm -f $(UUID).shell-extension.zip
 	@mkdir -p _dist
 	@cp $(JS_FILES) $(EXTRA_FILES) _dist/ 2>/dev/null || true
-	@cp -r icons schemas locale _dist/ 2>/dev/null || true
+	@cp -r icons schemas locale src _dist/ 2>/dev/null || true
 	@cd _dist && zip -qr ../$(UUID).shell-extension.zip .
 	@rm -rf _dist
 	@echo "Pakke laget: $(UUID).shell-extension.zip"
@@ -86,6 +92,7 @@ zip: build
 test:
 	@echo "Kjører enhetstester..."
 	@gjs -m tests/unit_tests.js
+	@gjs -m tests/history_tests.js
 
 release:
 	@echo "Starter release-prosess (bumpe versjon og lage tag)..."

@@ -25,6 +25,25 @@ export const AgentUtils = {
     _config: {
         tight: "\\/:;!?\"'`<>|*$&()[]{}@~# ",
         loose: "\\/:?\"<>|*",
+        systemRunDir: '/run/hera',
+        systemLogDir: '/var/log/hera',
+        subDirName: 'hera',
+    },
+
+    /**
+     * Returns the directory where agent metadata and pipes are stored.
+     */
+    getRunDir(isSystem) {
+        if (isSystem) return this._config.systemRunDir;
+        return GLib.build_filenamev([GLib.get_user_runtime_dir(), this._config.subDirName]);
+    },
+
+    /**
+     * Returns the log directory for the given agent type.
+     */
+    getLogDir(isSystem) {
+        if (isSystem) return this._config.systemLogDir;
+        return GLib.build_filenamev([GLib.get_user_data_dir(), this._config.subDirName, 'logs']);
     },
 
     /**
@@ -267,15 +286,28 @@ export const AgentUtils = {
     },
 
     /**
-     * Wraps a callback to catch and log errors to the journal before re-throwing.
-     * In GNOME Shell, 'logError' is the preferred way to log exceptions.
+     * Wraps a callback to ensure that any exceptions (sync or async) are logged 
+     * to the system journal before being re-thrown. 
+     * 
+     * This does NOT make the callback "safe" to fail; it ensures the failure 
+     * is documented with a diagnostic prefix.
      */
     safeCallback(callback, prefix = 'Agent') {
         return (...args) => {
             try {
-                return callback(...args);
+                const result = callback(...args);
+                
+                // If the callback is async (returns a Promise), hook into its catch handler
+                if (result && typeof result.catch === 'function') {
+                    return result.catch(e => {
+                        if (typeof logError === 'function') logError(e, `${prefix} (Async)`);
+                        else console.error(`${prefix} (Async) Exception: ${e.message}\n${e.stack}`);
+                        throw e;
+                    });
+                }
+                return result;
             } catch (e) {
-                if (typeof logError === 'function') logError(e, `${prefix} Exception`);
+                if (typeof logError === 'function') logError(e, prefix);
                 else console.error(`${prefix} Exception: ${e.message}\n${e.stack}`);
                 throw e;
             }

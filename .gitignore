@@ -1,6 +1,7 @@
 old*/
 bak/
 node_modules/
+safe/
 
 # Logs and temporary files
 *.log

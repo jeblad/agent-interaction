@@ -221,7 +221,12 @@ class AgentMenuToggle extends QuickSettings.QuickMenuToggle {
             // Shell has cleaned up the focus stack before we open the prefs window.
             // This allows the window to "rise to the top" as expected.
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, AgentUtils.safeCallback(() => {
-                this._indicator._extension.openPreferences();
+                const p = this._indicator._extension.openPreferences();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(e => {
+                        console.error(`AgentInteraction: Failed to open preferences: ${e.message}`);
+                    });
+                }
                 return GLib.SOURCE_REMOVE;
             }, 'AgentSettingsIdle'));
         }, 'DropSettingsItem'));
@@ -247,10 +252,9 @@ class AgentIndicator extends QuickSettings.SystemIndicator {
         this._manualDisconnect = false;
         this._accessWindows = new Map();
 
-        this._runDirs = [
-            Gio.File.new_for_path('/run/hera'),
-            Gio.File.new_for_path(GLib.build_filenamev([GLib.get_user_runtime_dir(), 'hera']))
-        ];
+        this._runDirs = [true, false].map(isSys => 
+            Gio.File.new_for_path(AgentUtils.getRunDir(isSys))
+        );
         this._monitors = new Map();
 
         this._indicator = this._addIndicator();
@@ -338,7 +342,7 @@ class AgentIndicator extends QuickSettings.SystemIndicator {
         let allAgents = [];
         this._runDirs.forEach(dir => {
             const path = dir.get_path();
-            const isSystemDir = path === '/run/hera';
+            const isSystemDir = path === AgentUtils.getRunDir(true);
 
             this._setupDirectoryMonitor(dir);
 
